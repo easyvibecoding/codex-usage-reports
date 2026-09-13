@@ -21,37 +21,48 @@ section[id]{background:#132630}.example-kicker,.example-note{color:#a0b2bb}}
 <h1 class="example-title">Every task. Every turn.</h1><section id="usage-reports-example" lang="ja" aria-label="このターンの使用量">
   <style>
     #usage-reports-example {
-      color: var(--foreground); overflow-wrap: anywhere; box-sizing: border-box;
-      border: 1px solid var(--border); border-radius: 16px; padding: clamp(16px, 3vw, 24px);
+      /* System color pairs remain readable when a remote host omits or misbinds its theme tokens. */
+      color: CanvasText; background-color: Canvas;
+      font-family: system-ui, sans-serif; font-size: 1rem; line-height: 1.5;
+      overflow-wrap: anywhere; box-sizing: border-box;
+      border: 1px solid var(--report-border, GrayText); border-radius: 16px; padding: clamp(16px, 3vw, 24px);
+    }
+    #usage-reports-example :is(h2, p, span, dt, dd, summary, strong, li, th, td) { color: inherit; -webkit-text-fill-color: currentColor; }
+    #usage-reports-example .text-small { font-size: .875em; opacity: .75; }
+    #usage-reports-example .viz-stat-value { color: CanvasText; font-size: 2rem; line-height: 1.2; font-weight: 500; }
+    #usage-reports-example .tabular-nums { font-variant-numeric: tabular-nums; }
+    #usage-reports-example .report-head h2 { font-size: 1.25em; }
+    @supports (color: color-mix(in srgb, CanvasText 20%, Canvas)) {
+      #usage-reports-example { --report-border: color-mix(in srgb, CanvasText 20%, Canvas); }
     }
     #usage-reports-example .report-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
     #usage-reports-example .report-head h2 { margin: 0; }
     #usage-reports-example .report-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin: 8px 0 20px; }
     #usage-reports-example .report-meta p { margin: 0; }
-    #usage-reports-example .report-meta .text-small { color: var(--muted-foreground); }
-    #usage-reports-example .report-totals { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 0; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-    #usage-reports-example .report-totals > div + div { border-left: 1px solid var(--border); padding-left: 16px; }
-    #usage-reports-example .report-totals dt { color: var(--foreground); }
+    #usage-reports-example .report-meta .text-small { color: CanvasText; }
+    #usage-reports-example .report-totals { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 0; padding: 16px 0; border-top: 1px solid var(--report-border, GrayText); border-bottom: 1px solid var(--report-border, GrayText); }
+    #usage-reports-example .report-totals > div + div { border-left: 1px solid var(--report-border, GrayText); padding-left: 16px; }
+    #usage-reports-example .report-totals dt { color: CanvasText; }
     #usage-reports-example .report-scope p { margin: 4px 0; }
     #usage-reports-example .report-context-list { margin: 8px 0; padding-left: 1.5em; }
     #usage-reports-example .report-context-list li + li { margin-top: 6px; }
     #usage-reports-example .report-context-single { margin: 8px 0; }
-    #usage-reports-example .report-context .text-small { color: var(--muted-foreground); margin: 6px 0; }
-    #usage-reports-example .report-quota .text-small { color: var(--muted-foreground); margin: 6px 0; }
+    #usage-reports-example .report-context .text-small { color: CanvasText; margin: 6px 0; }
+    #usage-reports-example .report-quota .text-small { color: CanvasText; margin: 6px 0; }
     #usage-reports-example .report-quota-weekly { display: block; margin-top: 4px; font-variant-numeric: tabular-nums; }
     #usage-reports-example .report-quota-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-    #usage-reports-example .report-quota-table th, #usage-reports-example .report-quota-table td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); }
+    #usage-reports-example .report-quota-table th, #usage-reports-example .report-quota-table td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--report-border, GrayText); }
     #usage-reports-example .report-quota-table th:last-child, #usage-reports-example .report-quota-table td:last-child { padding-right: 0; }
-    #usage-reports-example .report-quota-table thead th { color: var(--muted-foreground); }
+    #usage-reports-example .report-quota-table thead th { color: CanvasText; }
     #usage-reports-example .report-quota-table th:nth-child(1) { width: 34%; }
     #usage-reports-example .report-quota-table th:nth-child(2) { width: 23%; }
-    #usage-reports-example dt { color: var(--muted-foreground); }
+    #usage-reports-example dt { color: CanvasText; }
     #usage-reports-example dd { margin: 4px 0 0; }
     #usage-reports-example details { margin-top: 20px; }
     #usage-reports-example summary { cursor: pointer; }
     #usage-reports-example .report-detail { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; }
     #usage-reports-example .report-detail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-    #usage-reports-example .report-agent { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+    #usage-reports-example .report-agent { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--report-border, GrayText); }
     @media (max-width: 480px) {
       #usage-reports-example .report-totals { grid-template-columns: minmax(0, 1fr); }
       #usage-reports-example .report-totals > div + div { border-left: 0; padding-left: 0; }

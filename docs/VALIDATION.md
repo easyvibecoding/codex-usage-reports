@@ -20,6 +20,38 @@ The automated CI matrix targets Python 3.10, 3.11, 3.12, and 3.13 on Linux.
 
 The installed hook test invokes real installed hook commands with synthetic native data. It does **not** establish that every Codex host delivers every event. The real catalog query checks current native parsing, not an end-to-end model conversation. Hook trust, native schema availability, and inline rendering remain host-dependent.
 
+## 0.1.1 remote-card rendering fix
+
+The earlier documentation frame supplied its own theme variables, masking the
+report fragment's dependency on host foreground colors. A reproduction with an
+inverted foreground makes the old template's title, totals, and disclosures
+match the background (contrast 1:1), while muted elapsed text remains visible.
+This matches the reported symptom; it does not identify the iPhone host's
+internal implementation.
+
+The updated fragment uses paired browser `CanvasText`/`Canvas` colors and scoped
+text styles. Playwright 1.62.1 exercised Chromium and WebKit across four locales,
+390/900 px widths, light/dark schemes, and missing/normal/inverted host tokens:
+96 cases passed, with no horizontal overflow or page errors, readable text
+(contrast at least 4.5:1), and keyboard-operable native disclosures. Both
+collapsed and expanded states were checked. WebKit screenshots were inspected.
+
+These are browser tests, not an end-to-end test on the iPhone remote app.
+Existing artifacts do not refresh after installation, and existing Tasks can
+keep their pinned runtime; start a new Task to pick up the corrected renderer.
+
+To reproduce (optional development dependencies only):
+
+```sh
+npm install --no-save --package-lock=false playwright@1.62.1
+npx playwright install chromium webkit
+python3 scripts/generate_examples.py
+node scripts/check_mobile_card.cjs
+```
+
+Use `BROWSER_CHANNEL=chrome` for an existing Chrome installation. CI runs this
+fragment matrix separately from the framed screenshot checks.
+
 ## Reproduce the source checks
 
 ```sh

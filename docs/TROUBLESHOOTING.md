@@ -2,6 +2,7 @@
 
 | Symptom | Check |
 | --- | --- |
+| Card borders or elapsed time appear, but main text is blank | Update to 0.1.1 or later and begin a new Task. Older cards and Tasks can retain the old theme-dependent template. Browser coverage is documented in [validation](VALIDATION.md); actual iPhone remote rendering still needs device confirmation. |
 | No automatic card | Confirm the plugin is installed, hooks are trusted, and this is a new Task. Run `auto-report status`. |
 | CLI report works, no inline visualization | The host must support local visualization references. Read the HTML/Markdown receipt instead. |
 | `missing_start` / `no_active_start` | Preview needs a running turn's baseline; install before starting a new Task. |
