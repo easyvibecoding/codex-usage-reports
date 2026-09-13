@@ -232,6 +232,8 @@ class AutoPreviewTest(unittest.TestCase):
         self.assertIn('data-metric="turn-delta">+1,200</dd>', card)
         self.assertNotIn("等待用量寫入", card)
         with self.transcript.open("a") as output:
+            output.write(json.dumps(native_counter(TASK, turn, 1500,
+                                                   request=300, turn_total=1500)) + "\n")
             output.write(json.dumps(counter(1500)) + "\n")
         handle({**payload, "hook_event_name": "Stop"}, self.data, home=self.root)
         receipt = json.loads(next((self.data / "auto-reports").glob("*.json")).read_text())

@@ -202,6 +202,7 @@ def preview(root: Path, session: str, turn: str, *, output_dir: Path, home=None)
         "key": key, "task_name": task["display_name"], "usage": usage, "usage_status": status,
         "contexts": current["contexts"], "contexts_limited": current.get("contexts_limited", False),
         "task_usage": current.get("usage"), "elapsed_seconds": seconds,
+        "counter_source": current.get("counter_source"),
         "captured_at": datetime.fromtimestamp(captured).astimezone().strftime("%H:%M:%S %Z"),
         "subagents": children, "quota": quota,
         **locale,

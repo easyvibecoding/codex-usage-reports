@@ -21,7 +21,7 @@ A long Task can include many turns, model switches, and child agents. A single s
 | Question | What the report shows |
 | --- | --- |
 | How much has this Task used? | The selected parent Task's observed cumulative tokens. |
-| What changed this turn? | The difference between valid native counter observations. |
+| What changed this turn? | The native turn counter, or a valid difference between counters from the same source. |
 | Which model and effort ran? | Settings observed in that turn, including visible changes. |
 | Did subagents contribute? | A separate child subtotal and coverage status. |
 | How much account quota remains? | Native quota observations when available, separate from Task tokens. |

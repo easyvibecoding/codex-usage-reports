@@ -222,6 +222,153 @@ class AutoReportTest(unittest.TestCase):
         self.event("Stop", 1)
         self.assertEqual(self.report()["usage"]["total"], 500)
 
+    def test_interleaved_offset_counters_keep_native_usage_and_turn_usage_together(self):
+        from codex_usage_reports.auto_report import _delta
+
+        for offset in (9000, -1000):
+            with self.subTest(event_offset=offset):
+                self.data = self.root / f"offset-{offset}"
+                self.page.write_text(json.dumps(self.meta) + "\n"
+                                     + json.dumps(counter(1800 + offset)) + "\n")
+                before = snapshot(str(self.page), self.payload["turn_id"])
+                self.assertEqual(before["counter_source"], "token_count")
+                self.start()
+                self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                           2000, request=200, turn_total=200))
+                self.append(counter(2000 + offset))
+                self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                           2300, request=300, turn_total=500))
+                native_end = self.page.stat().st_size - 1
+                self.append(counter(2300 + offset))
+                after = snapshot(str(self.page), self.payload["turn_id"])
+                self.assertEqual(after["counter_source"], "native_request")
+                self.assertEqual(after["usage"]["total"], 2300)
+                self.assertEqual(after["turn_usage"]["total"], 500)
+                self.assertEqual(after["usage_end"], native_end)
+                self.assertNotIn("counter_reset_end", after)
+                usage, status = _delta(before, after)
+                self.assertEqual((usage["total"], status), (500, "native_turn_counter"))
+                self.event("Stop", 1)
+                self.assertEqual(self.report()["usage"]["total"], 500)
+                self.assertEqual(self.report()["task_usage"]["total"], 2300)
+                self.assertEqual(self.report()["usage_status"], "native_turn_counter")
+
+    def test_native_turn_counter_accepts_legacy_baseline_with_unknown_counter_source(self):
+        from codex_usage_reports.auto_report import _delta
+
+        self.append(counter(10800))
+        before = snapshot(str(self.page), self.payload["turn_id"])
+        before.pop("counter_source", None)  # Persisted baseline from an older runtime.
+        self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                   2300, request=300, turn_total=500))
+        self.append(counter(11300))
+        after = snapshot(str(self.page), self.payload["turn_id"])
+        usage, status = _delta(before, after)
+        self.assertEqual((usage["total"], status), (500, "native_turn_counter"))
+        self.assertEqual(after["usage"]["total"], 2300)
+        self.assertEqual(after["counter_source"], "native_request")
+
+    def test_real_native_cumulative_and_turn_declines_fail_with_monotone_event_lane(self):
+        from codex_usage_reports.auto_report import _delta
+
+        for latest_total, latest_turn in ((1900, 600), (2100, 400)):
+            with self.subTest(native_total=latest_total, native_turn=latest_turn):
+                self.page.write_text(json.dumps(self.meta) + "\n"
+                                     + json.dumps(counter(10800)) + "\n")
+                before = snapshot(str(self.page), self.payload["turn_id"])
+                self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                           2000, request=100, turn_total=500))
+                self.append(counter(11000))
+                self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                           latest_total, request=100, turn_total=latest_turn))
+                self.append(counter(11300))
+                after = snapshot(str(self.page), self.payload["turn_id"])
+                self.assertEqual(after["counter_source"], "native_request")
+                self.assertEqual(after["usage"]["total"], latest_total)
+                self.assertIsNone(_delta(before, after)[0])
+                legacy = {key: value for key, value in before.items() if key != "counter_source"}
+                self.assertIsNone(_delta(legacy, after)[0])
+                if latest_total < 2000:
+                    self.assertGreater(after["counter_reset_end"], before["size"])
+                else:
+                    self.assertNotIn("turn_usage", after)
+
+    def test_fallback_event_counter_does_not_subtract_a_native_source_baseline(self):
+        from codex_usage_reports.auto_report import _delta
+
+        self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                   1200, request=200, turn_total=200))
+        before = snapshot(str(self.page), self.payload["turn_id"])
+        self.assertEqual(before["counter_source"], "native_request")
+        self.append({"type": "response_item", "payload": {"type": "message", "text": "x" * 4096}})
+        self.append(counter(10300))
+        with patch("codex_usage_reports.auto_report.SCAN_BYTES", 512):
+            after = snapshot(str(self.page), self.payload["turn_id"])
+        self.assertEqual(after["counter_source"], "token_count")
+        self.assertEqual(after["usage"]["total"], 10300)
+        self.assertEqual(_delta(before, after), (None, "counter_source_changed"))
+
+    def test_native_source_decline_across_bounded_snapshots_is_not_hidden_by_turn_counter(self):
+        from codex_usage_reports.auto_report import _delta
+
+        self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                   3000, request=100, turn_total=500))
+        before = snapshot(str(self.page), self.payload["turn_id"])
+        self.append({"type": "response_item", "payload": {"type": "message", "text": "x" * 4096}})
+        self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                   2800, request=100, turn_total=700))
+        with patch("codex_usage_reports.auto_report.SCAN_BYTES", 1024):
+            after = snapshot(str(self.page), self.payload["turn_id"])
+        self.assertEqual(before["counter_source"], "native_request")
+        self.assertEqual(after["counter_source"], "native_request")
+        self.assertTrue(after["tail_limited"])
+        self.assertNotIn("counter_reset_end", after)
+        self.assertEqual(after["turn_usage"]["total"], 700)
+        self.assertEqual(_delta(before, after), (None, "counter_reset_or_inconsistent"))
+
+    def test_turn_decline_across_bounded_snapshots_is_not_hidden_by_rising_task_counter(self):
+        from codex_usage_reports.auto_report import _delta
+
+        self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                   3000, request=100, turn_total=500))
+        before = snapshot(str(self.page), self.payload["turn_id"])
+        self.append({"type": "response_item", "payload": {"type": "message", "text": "x" * 4096}})
+        self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                   3100, request=100, turn_total=400))
+        with patch("codex_usage_reports.auto_report.SCAN_BYTES", 1024):
+            after = snapshot(str(self.page), self.payload["turn_id"])
+        self.assertTrue(after["tail_limited"])
+        self.assertNotIn("counter_reset_end", after)
+        self.assertEqual(before["requested_turn_hash"], after["requested_turn_hash"])
+        self.assertEqual((before["usage"]["total"], after["usage"]["total"]), (3000, 3100))
+        self.assertEqual((before["turn_usage"]["total"], after["turn_usage"]["total"]), (500, 400))
+        self.assertEqual(_delta(before, after), (None, "counter_reset_or_inconsistent"))
+
+    def test_invalid_latest_native_counter_never_falls_back_to_older_or_event_usage(self):
+        from codex_usage_reports.auto_report import _delta
+
+        for field, missing in (("thread_token_usage", False), ("turn_token_usage", False),
+                               ("turn_token_usage", True), ("usage", True), ("response_id", True)):
+            with self.subTest(field=field, missing=missing):
+                self.page.write_text(json.dumps(self.meta) + "\n"
+                                     + json.dumps(counter(10800)) + "\n")
+                before = snapshot(str(self.page), self.payload["turn_id"])
+                self.append(native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                           2000, request=200, turn_total=200))
+                broken = native_counter(self.payload["session_id"], self.payload["turn_id"],
+                                        2300, request=300, turn_total=500)
+                if missing:
+                    del broken["payload"][field]
+                else:
+                    broken["payload"][field] = None
+                self.append(broken)
+                self.append(counter(11300))
+                after = snapshot(str(self.page), self.payload["turn_id"])
+                self.assertEqual(after["counter_source"], "native_request")
+                self.assertIsNone(after["usage"])
+                self.assertNotIn("turn_usage", after)
+                self.assertIsNone(_delta(before, after)[0])
+
     def test_native_counter_rejects_foreign_scope_missing_fields_and_bad_values(self):
         base = native_counter("private-session-id", self.payload["turn_id"], 1200)
         variants = [
@@ -427,6 +574,8 @@ class AutoReportTest(unittest.TestCase):
         self.append(counter(100))
         self.append(counter(1500))
         after = snapshot(str(self.page), self.payload["turn_id"])
+        self.assertEqual(after["counter_source"], "token_count")
+        self.assertGreater(after["counter_reset_end"], before["size"])
         self.assertIsNone(_delta(before, after)[0])
         # A reset already present before the new boundary does not poison it.
         self.append(counter(1600))

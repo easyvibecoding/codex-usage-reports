@@ -3,7 +3,7 @@
 | Field | Meaning |
 | --- | --- |
 | Task cumulative | Latest observed parent Task counter, across its turns. |
-| This-turn delta | Valid current counter minus the turn baseline. |
+| This-turn delta | Valid native turn counter; otherwise, a valid same-source current counter minus the turn baseline. |
 | Child subtotal | Observed child usage attributable to the selected interval. |
 | Observed combined subtotal | Parent turn usage plus available child usage; check coverage. |
 | Input | Native input tokens, including cached input. |
@@ -15,6 +15,16 @@
 | Account quota | A native account observation at capture time, not Task consumption. |
 
 ## Read the status as well as the number
+
+Native request records (`token_usage_record`) and legacy `token_count` events
+can use different historical baselines. Reports prefer a validated request
+record for the selected Task and turn, keeping its thread and turn totals
+together. Resets are checked within each source, never between alternating
+sources. `counter_source` identifies the selected lane in report JSON.
+If only legacy events are available, boundary subtraction requires the same
+source on both sides. A source change without a valid native turn counter stays
+unavailable (`counter_source_changed`). A valid native turn counter does not
+require subtracting a baseline, including a baseline written by an older plugin.
 
 A missing value is not zero. Resets, malformed or bounded transcript tails, conflicting timestamps, and missing lineage can prevent a trustworthy delta. The report preserves partial or unavailable status instead of reconstructing unsupported precision.
 

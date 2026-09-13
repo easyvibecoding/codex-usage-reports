@@ -228,6 +228,7 @@ def run(payload: dict, root: Path, *, home=None, delays=DELAYS) -> dict:
                 "reconciled_at": datetime.now(timezone.utc).isoformat(),
                 "completion_observed": True, "completed_at": current.get("completed_at"),
                 "usage": usage, "usage_status": status, "task_usage": current.get("usage"),
+                "counter_source": current.get("counter_source"),
                 "stop_contexts": current.get("contexts", []),
                 "contexts_limited": current.get("contexts_limited", False),
                 "subagents": children,

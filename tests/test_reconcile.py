@@ -339,7 +339,8 @@ class ReconcileTest(unittest.TestCase):
     def test_counter_reset_publishes_partial_without_inventing_delta(self):
         self.stopped()
         self.queued()
-        self.append(fixtures.native_counter(TASK, TURN, 600, request=100, turn_total=100),
+        self.append(fixtures.native_counter(TASK, TURN, 1200, request=200, turn_total=200),
+                    fixtures.native_counter(TASK, TURN, 600, request=100, turn_total=100),
                     self.native_event("task_complete", stamp=self.now + 2))
         self.assertEqual(run(self.payload, self.data, home=self.home,
                              delays=(0,))["status"], "partial")

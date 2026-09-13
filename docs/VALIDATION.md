@@ -1,5 +1,27 @@
 # Validation and compatibility
 
+## 0.2.1 counter-source isolation
+
+- 182 unit/integration tests passed locally. Coverage includes positive and
+  negative offsets between native request and legacy event totals, malformed
+  native records, true same-source resets, and a turn-counter decrease whose
+  preceding record has fallen outside the bounded tail.
+- A fresh isolated Codex home installed 0.2.1. Actual installed bootstrap and
+  pinned-runtime commands rendered synthetic preview delta 600, settled Stop
+  delta 800 in 0.0924 seconds, then reconciled delta 1,000 / Task total 2,000.
+  Legacy event totals were independently offset. A next-turn event of 9,990,000
+  was excluded, all original Stop files stayed byte-identical, and the installed
+  CLI returned revision 2 with `counter_source=native_request`.
+- Read-only inspection of the selected affected native turn confirmed separate
+  monotonic counter streams with different historical baselines. The corrected
+  snapshot returned the explicit native turn counter through `task_complete`.
+  Historical settings remained partial; private records and user totals are
+  excluded from this repository. This is parsing evidence, not a new phone UI
+  or live hook-delivery test.
+
+The installed runtime SHA-256 was
+`1158a88d63c2c170d1785beec399303e316373debd89215d1c04197e84a8669f`.
+
 ## 0.2.0 completion reconciliation
 
 Verified on macOS with Codex CLI 0.154.0 and Python 3.12.8:

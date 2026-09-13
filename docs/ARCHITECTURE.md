@@ -32,6 +32,13 @@ flowchart LR
 - `turn_quota` / `meter_source` / `meter_plan` / `quota_view`: native quota observation and presentation.
 - `bootstrap`: SHA-256-pinned, cache-independent runtime loading.
 
+Counter snapshots track native request records and legacy token-count events
+separately. A matching, validated native request provides both Task and turn
+totals even when the legacy event stream has a different historical baseline.
+Only observations within a source establish resets; boundary differences never
+cross sources. Invalid native records cannot silently fall back to an older
+valid observation. See [metrics](METRICS.md) for status semantics.
+
 ## Completion reconciliation
 
 `Stop` can arrive before the final native usage record is written. The initial

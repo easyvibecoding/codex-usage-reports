@@ -312,7 +312,7 @@ def _first_turn_proof(records, turn: str) -> tuple[bool, bool]:
            if key.startswith("fork") or key == "parent_thread_id"):
         return False, False
     began = model_seen = usage_seen = False
-    previous = None
+    previous = {}
     for record in records[1:]:
         kind, payload = record["type"], record["payload"]
         event = payload.get("type")
@@ -352,9 +352,10 @@ def _first_turn_proof(records, turn: str) -> tuple[bool, bool]:
                 return False, False
         if values is not None:
             usage_seen = True
-            if previous and any(values[key] < previous[key] for key in values):
+            lane = previous.get(kind)
+            if lane and any(values[key] < lane[key] for key in values):
                 return False, False
-            previous = values
+            previous[kind] = values
     return began, began and not model_seen and not usage_seen
 
 
@@ -499,12 +500,12 @@ def snapshot(path_value: Any, turn_id: str, *, at_turn_start: bool = False,
             except (ValueError, RecursionError):
                 lines.pop()
                 result["invalid_records"] = True
-        usage_seen = False
+        # Native request totals and token_count events can have different
+        # historical baselines. Never compare or subtract across these lanes.
+        counters = {}
         turn_usage_seen = False
         later_turn_usage = None
         turn_counter_invalid = False
-        later_counter = None
-        later_counter_end = None
         records = []
         seeking_start = at_turn_start
         for line, line_end in reversed(lines):
@@ -543,24 +544,19 @@ def snapshot(path_value: Any, turn_id: str, *, at_turn_start: bool = False,
                 seeking_start = False
             records.append(record)
             counter = None
+            source = None
             if record.get("type") == "event_msg" and payload.get("type") == "token_count":
                 observed = _usage_from_line(record)
                 counter = asdict(observed) if observed else None
-                if not usage_seen:
-                    usage_seen = True
-                    result["usage"] = counter
-                    result["usage_end"] = line_end
+                source = "token_count"
             if (record.get("type") == "token_usage_record" and payload.get("turn_id") == turn_id
                     and "thread_token_usage" in payload):
                 cumulative = _request_thread_counter(payload, identity, turn_id)
                 counter = cumulative
-                if not usage_seen:
-                    usage_seen = True
-                    result["usage"] = cumulative
-                    result["usage_end"] = line_end
+                source = "native_request"
                 if not turn_usage_seen:
                     turn_usage_seen = True
-                    if cumulative and cumulative == result.get("usage"):
+                    if cumulative:
                         result["turn_usage"] = {
                             key: payload["turn_token_usage"][key + "_tokens"] for key in cumulative
                         }
@@ -573,12 +569,23 @@ def snapshot(path_value: Any, turn_id: str, *, at_turn_start: bool = False,
                     later_turn_usage = native_turn
                 else:
                     turn_counter_invalid = True
-            if counter:
-                if later_counter and any(counter[key] > later_counter[key] for key in counter):
-                    result.setdefault("counter_reset_end", later_counter_end)
-                later_counter, later_counter_end = counter, line_end
+            if source:
+                lane = counters.setdefault(source, {"usage": counter, "usage_end": line_end})
+                later = lane.get("later")
+                if counter:
+                    if later and any(counter[key] > later[key] for key in counter):
+                        lane.setdefault("counter_reset_end", lane["later_end"])
+                    lane.update(later=counter, later_end=line_end)
         if seeking_start:
             return {"status": "unavailable", "usage": None, "contexts": []}
+        source = "native_request" if "native_request" in counters else "token_count"
+        if source in counters:
+            lane = counters[source]
+            result.update(counter_source=source, usage=lane["usage"], usage_end=lane["usage_end"])
+            if "counter_reset_end" in lane:
+                result["counter_reset_end"] = lane["counter_reset_end"]
+        if turn_counter_invalid:
+            result["turn_counter_invalid"] = True
         if turn_counter_invalid or result.get("invalid_records"):
             result.pop("turn_usage", None)
         result["contexts"], result["contexts_limited"] = _turn_contexts(
@@ -607,12 +614,22 @@ def _delta(before: dict[str, Any], after: dict[str, Any]) -> tuple[dict[str, int
         return None, "snapshot_incomplete"
     if after.get("counter_reset_end", 0) > before["size"]:
         return None, "counter_reset_or_inconsistent"
+    if after.get("turn_counter_invalid"):
+        return None, "counter_reset_or_inconsistent"
     first, last = before.get("usage"), after.get("usage")
-    if first and last and any(last[key] < first[key] for key in first):
+    same_source = before.get("counter_source") == after.get("counter_source")
+    if same_source and first and last and any(last[key] < first[key] for key in first):
         return None, "counter_reset_or_inconsistent"
     if (after.get("turn_usage") is not None
             and before.get("requested_turn_hash") == after.get("requested_turn_hash")):
+        # A bounded tail may no longer contain the baseline's native record.
+        # Compare turn counters too, even if the thread total still increases.
+        prior_turn = before.get("turn_usage")
+        if prior_turn and any(after["turn_usage"][key] < prior_turn[key] for key in prior_turn):
+            return None, "counter_reset_or_inconsistent"
         return after["turn_usage"], "native_turn_counter"
+    if first and last and not same_source:
+        return None, "counter_source_changed"
     if before.get("invalid_records"):
         return None, "snapshot_incomplete"
     if (first and first == last
@@ -965,6 +982,7 @@ def handle(
                 "stopped_at": datetime.fromtimestamp(now, timezone.utc).isoformat(),
                 "usage": usage,
                 "task_usage": stopped.get("usage") if source_verified else None,
+                "counter_source": stopped.get("counter_source") if source_verified else None,
                 "usage_status": status,
                 "start_model": started.get("hook_model") if source_verified else None,
                 "stop_model": _model(payload.get("model")) if source_verified else None,

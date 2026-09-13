@@ -14,6 +14,7 @@
 | `missing_start` / `no_active_start` | Preview needs a running turn's baseline; install before starting a new Task. |
 | `below_threshold` | The turn has not exceeded the configured seconds. Use `auto-report threshold 0` for all durations. |
 | `source_unavailable` or unknown tokens | Native state is missing, changed, bounded, or inconsistent. Do not substitute estimated values. |
+| Task total appears but this-turn tokens say unobserved after an update | Update to 0.2.1 or later. Earlier versions could mix native request and legacy event totals with different baselines and report a false reset. The fix keeps sources separate; true resets and invalid native counters remain unavailable. Trust the updated hooks and start a new Task; old inline cards remain snapshots. |
 | Invalid output directory | Use an absolute nonsymlink path under the Task's native visualization root or catalog workspace. |
 | Two cards | Disable automatic reports in one of the two plugins. See [migration](MIGRATION.md). |
 | Settings differ from current preferences | Reports describe historical observations; this may be expected. |

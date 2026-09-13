@@ -89,6 +89,47 @@ class CompletionSnapshotTest(unittest.TestCase):
         self.assertNotIn("invalid_records", result)
         self.assertNotIn("example-later-model", json.dumps(result))
 
+    def test_offset_counter_lanes_stop_at_completion_before_later_turn_counters(self):
+        self.write(self.header, fixtures.counter(10800), event("task_started"), context())
+        before = snapshot(str(self.path), TURN)
+        self.append(fixtures.native_counter(TASK, TURN, 2000, request=200, turn_total=200),
+                    fixtures.counter(11000),
+                    fixtures.native_counter(TASK, TURN, 2300, request=300, turn_total=500))
+        native_end = self.path.stat().st_size - 1
+        self.append(fixtures.counter(11300), event("task_complete"))
+        completion_end = self.path.stat().st_size - 1
+        self.append(event("task_started", "example-next-turn"),
+                    context("example-next-turn", "example-next-model"),
+                    fixtures.native_counter(TASK, "example-next-turn", 9999000),
+                    fixtures.counter(19999000))
+        result = self.completed()
+        self.assertTrue(result["completion_observed"])
+        self.assertEqual(result["counter_source"], "native_request")
+        self.assertEqual(result["usage"]["total"], 2300)
+        self.assertEqual(result["turn_usage"]["total"], 500)
+        self.assertEqual(result["usage_end"], native_end)
+        self.assertEqual(result["size"], completion_end)
+        self.assertEqual(result["completion_end"], completion_end)
+        self.assertNotIn("counter_reset_end", result)
+        self.assertEqual(result["contexts"][0]["model"], "example-first-model")
+        usage, status = _delta(before, result)
+        self.assertEqual((usage["total"], status), (500, "native_turn_counter"))
+
+    def test_malformed_native_at_completion_never_reuses_earlier_native_or_event_value(self):
+        self.append(fixtures.counter(10800))
+        before = snapshot(str(self.path), TURN)
+        broken = fixtures.native_counter(TASK, TURN, 2300, request=300, turn_total=500)
+        broken["payload"]["turn_token_usage"] = None
+        self.append(fixtures.native_counter(TASK, TURN, 2000, request=200, turn_total=200),
+                    fixtures.counter(11000), broken, fixtures.counter(11300),
+                    event("task_complete"))
+        result = self.completed()
+        self.assertTrue(result["completion_observed"])
+        self.assertEqual(result["counter_source"], "native_request")
+        self.assertIsNone(result["usage"])
+        self.assertNotIn("turn_usage", result)
+        self.assertIsNone(_delta(before, result)[0])
+
     def test_unscoped_later_same_task_counters_are_excluded(self):
         self.append(fixtures.counter(800), event("task_complete"))
         boundary = self.path.stat().st_size - 1

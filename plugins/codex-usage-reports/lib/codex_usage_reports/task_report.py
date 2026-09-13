@@ -101,6 +101,7 @@ def _turns(root: Path, task_hash: str, limit: int) -> tuple[list, bool, str]:
                         or receipt.get("turn_hash") != row["turn_hash"]):
                     raise ValueError("receipt identity mismatch")
                 item.update(usage=receipt.get("usage"), task_usage=receipt.get("task_usage"),
+                            counter_source=receipt.get("counter_source"),
                             contexts=receipt.get("stop_contexts", []),
                             contexts_limited=receipt.get("contexts_limited", False),
                             usage_status=receipt.get("usage_status", "unavailable"),
@@ -146,6 +147,7 @@ def build_task_report(root: Path, selector: str, *, home=None, limit=50) -> dict
         "task": description,
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "task_usage": current.get("usage"),
+        "counter_source": current.get("counter_source"),
         "usage_status": current["status"],
         "latest_turn_hash": stable_hash(turn) if turn else None,
         "contexts": current.get("contexts", []),

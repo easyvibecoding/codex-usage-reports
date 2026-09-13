@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-09-13
+
+- Fix false unobserved turn usage when native request totals and legacy token-count events use different historical baselines.
+- Keep Task and turn totals from the same validated native request source; record `counter_source` and never subtract counters across sources.
+- Preserve same-source resets, malformed records, source identity checks, and completion-boundary protections.
+
 ## 0.2.0 — 2026-09-13
 
 - Add one bounded local completion worker after each reported Stop: up to eight scans with a 25-second retry deadline, without calling a model or continuing a Task.
