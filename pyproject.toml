@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-usage-reports"
+version = "0.1.0"
+description = "Automatic local Task and turn usage reports for Codex"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "EasyVibeCoding"}]
+keywords = ["codex", "usage", "tokens", "reports", "subagents", "hooks"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/easyvibecoding/codex-usage-reports"
+Repository = "https://github.com/easyvibecoding/codex-usage-reports"
+Issues = "https://github.com/easyvibecoding/codex-usage-reports/issues"
+
+[project.scripts]
+codex-usage-reports = "codex_usage_reports.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "plugins/codex-usage-reports/lib"}
+
+[tool.setuptools.packages.find]
+where = ["plugins/codex-usage-reports/lib"]
+
+[tool.setuptools.package-data]
+codex_usage_reports = ["assets/*.html", "assets/locales/*.json"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W"]

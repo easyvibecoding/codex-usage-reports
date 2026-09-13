@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "scope": "selected_task",
+  "task": {
+    "display_name": "Example · Build a local reading list"
+  },
+  "locale": "en",
+  "captured_at": "2026-01-01T10:42:22Z",
+  "task_usage": {
+    "total": 126800,
+    "input": 114120,
+    "cached_input": 76080,
+    "output": 12680,
+    "reasoning_output": 6340
+  },
+  "usage_status": "observed",
+  "history_complete": false,
+  "turns_limited": false,
+  "contexts": [
+    {
+      "model": "example-model",
+      "reasoning_effort": "high"
+    }
+  ],
+  "turn_recording_status": "observed",
+  "native_tail_limited": false,
+  "counter_reset_observed": false,
+  "turns": [
+    {
+      "started_at": "2026-01-01T10:40:00Z",
+      "state": "reported",
+      "usage": {
+        "total": 18400,
+        "input": 16560,
+        "cached_input": 11040,
+        "output": 1840,
+        "reasoning_output": 920
+      },
+      "contexts": [
+        {
+          "model": "example-model",
+          "reasoning_effort": "high"
+        }
+      ],
+      "usage_status": "observed"
+    },
+    {
+      "started_at": "2026-01-01T10:35:00Z",
+      "state": "reported",
+      "usage": {
+        "total": 12400,
+        "input": 11160,
+        "cached_input": 7440,
+        "output": 1240,
+        "reasoning_output": 620
+      },
+      "contexts": [
+        {
+          "model": "example-model",
+          "reasoning_effort": "medium"
+        }
+      ],
+      "usage_status": "observed"
+    }
+  ]
+}

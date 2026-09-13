@@ -1,0 +1,20 @@
+{
+  "name": "codex-usage-reports",
+  "interface": {
+    "displayName": "Codex Usage Reports"
+  },
+  "plugins": [
+    {
+      "name": "codex-usage-reports",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-usage-reports"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

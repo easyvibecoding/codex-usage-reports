@@ -1,0 +1,4 @@
+plugins/*/hooks/hooks.json linguist-generated=true
+plugins/*/runtime/*.pyz linguist-generated=true
+docs/examples/*.html linguist-generated=true
+docs/examples/*.json linguist-generated=true

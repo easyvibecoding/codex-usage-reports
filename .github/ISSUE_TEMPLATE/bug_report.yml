@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a reproducible reporting or compatibility issue
+title: "[Bug]: "
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions
+      description: Plugin, Codex, Python, and operating system versions. Omit private paths.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Synthetic reproduction
+      description: Steps and expected/observed statuses. Never attach real transcripts, Task IDs, databases, or credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true

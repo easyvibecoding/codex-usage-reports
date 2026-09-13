@@ -1,0 +1,83 @@
+<section id="usage-reports-$key" lang="$locale" aria-label="$label_card_title">
+  <style>
+    #usage-reports-$key {
+      color: var(--foreground); overflow-wrap: anywhere; box-sizing: border-box;
+      border: 1px solid var(--border); border-radius: 16px; padding: clamp(16px, 3vw, 24px);
+    }
+    #usage-reports-$key .report-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+    #usage-reports-$key .report-head h2 { margin: 0; }
+    #usage-reports-$key .report-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin: 8px 0 20px; }
+    #usage-reports-$key .report-meta p { margin: 0; }
+    #usage-reports-$key .report-meta .text-small { color: var(--muted-foreground); }
+    #usage-reports-$key .report-totals { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 0; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    #usage-reports-$key .report-totals > div + div { border-left: 1px solid var(--border); padding-left: 16px; }
+    #usage-reports-$key .report-totals dt { color: var(--foreground); }
+    #usage-reports-$key .report-scope p { margin: 4px 0; }
+    #usage-reports-$key .report-context-list { margin: 8px 0; padding-left: 1.5em; }
+    #usage-reports-$key .report-context-list li + li { margin-top: 6px; }
+    #usage-reports-$key .report-context-single { margin: 8px 0; }
+    #usage-reports-$key .report-context .text-small { color: var(--muted-foreground); margin: 6px 0; }
+    #usage-reports-$key .report-quota .text-small { color: var(--muted-foreground); margin: 6px 0; }
+    #usage-reports-$key .report-quota-weekly { display: block; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    #usage-reports-$key .report-quota-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+    #usage-reports-$key .report-quota-table th, #usage-reports-$key .report-quota-table td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); }
+    #usage-reports-$key .report-quota-table th:last-child, #usage-reports-$key .report-quota-table td:last-child { padding-right: 0; }
+    #usage-reports-$key .report-quota-table thead th { color: var(--muted-foreground); }
+    #usage-reports-$key .report-quota-table th:nth-child(1) { width: 34%; }
+    #usage-reports-$key .report-quota-table th:nth-child(2) { width: 23%; }
+    #usage-reports-$key dt { color: var(--muted-foreground); }
+    #usage-reports-$key dd { margin: 4px 0 0; }
+    #usage-reports-$key details { margin-top: 20px; }
+    #usage-reports-$key summary { cursor: pointer; }
+    #usage-reports-$key .report-detail { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; }
+    #usage-reports-$key .report-detail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    #usage-reports-$key .report-agent { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+    @media (max-width: 480px) {
+      #usage-reports-$key .report-totals { grid-template-columns: minmax(0, 1fr); }
+      #usage-reports-$key .report-totals > div + div { border-left: 0; padding-left: 0; }
+    }
+  </style>
+  <div class="report-head">
+    <h2>$label_card_title</h2>
+    <span class="text-small">$label_pre_final · $captured</span>
+  </div>
+  <div class="report-meta">
+    <p>$task</p>
+    <p class="text-small">$label_elapsed_wait: $elapsed</p>
+  </div>
+  <dl class="report-totals">
+    <div>
+      <dt>$label_task_total</dt>
+      <dd class="viz-stat-value tabular-nums" data-metric="task-total">$task_total</dd>
+    </div>
+    <div>
+      <dt>$label_turn_delta</dt>
+      <dd class="viz-stat-value tabular-nums" data-metric="turn-delta">$turn_delta</dd>
+    </div>
+  </dl>
+  <details class="report-scope">
+    <summary>$total_label ($label_combined): <strong class="tabular-nums">$total</strong></summary>
+    <p class="text-small">$usage_label</p>
+    <p class="text-small">$coverage</p>
+  </details>
+  $quota
+  <details class="report-context">
+    <summary>$label_context_heading</summary>
+    $contexts
+    <p class="text-small">$label_context_note</p>
+    $context_partial
+  </details>
+  <details>
+    <summary>$label_details</summary>
+    <dl class="report-detail">
+      <dt>$label_parent</dt><dd>$parent_total</dd>
+      <dt>$label_child_subtotal</dt><dd>$child_total</dd>
+      <dt>$label_input</dt><dd>$input</dd>
+      <dt>$label_cached</dt><dd>$cached</dd>
+      <dt>$label_output</dt><dd>$output</dd>
+      <dt>$label_reasoning</dt><dd>$reasoning</dd>
+    </dl>
+    $agents
+    <p class="text-small">$label_card_note</p>
+  </details>
+</section>

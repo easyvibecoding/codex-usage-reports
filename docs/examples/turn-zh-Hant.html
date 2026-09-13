@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Codex Usage Reports · Synthetic example</title>
+<style>
+:root{color-scheme:light;--foreground:#1a2c35;--muted-foreground:#536772;--border:#d7e1e4}
+*{box-sizing:border-box}body{margin:0;background:#eaf0f0;color:var(--foreground);
+font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:900px;margin:0 auto;padding:36px}
+.example-kicker{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#536772;
+margin:0 0 8px}.example-title{font-size:25px;margin:0 0 20px;font-weight:650}
+.example-note{font-size:12px;color:#536772;margin:18px 0 0}
+section[id]{background:#fff}h2{font-size:20px}.text-small{font-size:13px}
+.viz-stat-value{font-size:36px;font-weight:650;letter-spacing:-.04em}
+.tabular-nums{font-variant-numeric:tabular-nums}
+summary:focus-visible{outline:2px solid #086b68;outline-offset:4px}
+@media(max-width:500px){main{padding:16px}.viz-stat-value{font-size:30px}}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--foreground:#e6efef;
+--muted-foreground:#a0b2bb;--border:#344650}body{background:#0b1a23}
+section[id]{background:#132630}.example-kicker,.example-note{color:#a0b2bb}}
+</style><main><p class="example-kicker">Codex Usage Reports / Product example</p>
+<h1 class="example-title">Every task. Every turn.</h1><section id="usage-reports-example" lang="zh-Hant" aria-label="本回合用量">
+  <style>
+    #usage-reports-example {
+      color: var(--foreground); overflow-wrap: anywhere; box-sizing: border-box;
+      border: 1px solid var(--border); border-radius: 16px; padding: clamp(16px, 3vw, 24px);
+    }
+    #usage-reports-example .report-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+    #usage-reports-example .report-head h2 { margin: 0; }
+    #usage-reports-example .report-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin: 8px 0 20px; }
+    #usage-reports-example .report-meta p { margin: 0; }
+    #usage-reports-example .report-meta .text-small { color: var(--muted-foreground); }
+    #usage-reports-example .report-totals { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 0; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    #usage-reports-example .report-totals > div + div { border-left: 1px solid var(--border); padding-left: 16px; }
+    #usage-reports-example .report-totals dt { color: var(--foreground); }
+    #usage-reports-example .report-scope p { margin: 4px 0; }
+    #usage-reports-example .report-context-list { margin: 8px 0; padding-left: 1.5em; }
+    #usage-reports-example .report-context-list li + li { margin-top: 6px; }
+    #usage-reports-example .report-context-single { margin: 8px 0; }
+    #usage-reports-example .report-context .text-small { color: var(--muted-foreground); margin: 6px 0; }
+    #usage-reports-example .report-quota .text-small { color: var(--muted-foreground); margin: 6px 0; }
+    #usage-reports-example .report-quota-weekly { display: block; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    #usage-reports-example .report-quota-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+    #usage-reports-example .report-quota-table th, #usage-reports-example .report-quota-table td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); }
+    #usage-reports-example .report-quota-table th:last-child, #usage-reports-example .report-quota-table td:last-child { padding-right: 0; }
+    #usage-reports-example .report-quota-table thead th { color: var(--muted-foreground); }
+    #usage-reports-example .report-quota-table th:nth-child(1) { width: 34%; }
+    #usage-reports-example .report-quota-table th:nth-child(2) { width: 23%; }
+    #usage-reports-example dt { color: var(--muted-foreground); }
+    #usage-reports-example dd { margin: 4px 0 0; }
+    #usage-reports-example details { margin-top: 20px; }
+    #usage-reports-example summary { cursor: pointer; }
+    #usage-reports-example .report-detail { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; }
+    #usage-reports-example .report-detail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    #usage-reports-example .report-agent { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+    @media (max-width: 480px) {
+      #usage-reports-example .report-totals { grid-template-columns: minmax(0, 1fr); }
+      #usage-reports-example .report-totals > div + div { border-left: 0; padding-left: 0; }
+    }
+  </style>
+  <div class="report-head">
+    <h2>本回合用量</h2>
+    <span class="text-small">結論前快照 · 10:42:22 UTC</span>
+  </div>
+  <div class="report-meta">
+    <p>Example · Build a local reading list</p>
+    <p class="text-small">回合經過時間（含等待）: 2.4 分鐘</p>
+  </div>
+  <dl class="report-totals">
+    <div>
+      <dt>Task 累積 Token（主代理）</dt>
+      <dd class="viz-stat-value tabular-nums" data-metric="task-total">126,800</dd>
+    </div>
+    <div>
+      <dt>本輪增加 Token（主代理）</dt>
+      <dd class="viz-stat-value tabular-nums" data-metric="turn-delta">+18,400</dd>
+    </div>
+  </dl>
+  <details class="report-scope">
+    <summary>已觀測合計 Token (主代理＋子代理): <strong class="tabular-nums">24,600</strong></summary>
+    <p class="text-small"></p>
+    <p class="text-small">子代理 1/1 位有用量紀錄 · 已觀測紀錄</p>
+  </details>
+  <details class="report-quota" aria-label="帳號額度快照"><summary>帳號額度快照<span class="report-quota-weekly">7 天 · 剩餘: 72% · 較上一輪: -1 百分點</span></summary><p class="text-small report-quota-plan">方案觀測：Pro</p><table class="report-quota-table"><thead><tr><th scope="col">窗口</th><th scope="col">剩餘</th><th scope="col">較上一輪</th></tr></thead><tbody><tr><th scope="row">Codex · 7 天</th><td class="tabular-nums">72%</td><td>-1 百分點</td></tr><tr><th scope="row">Codex · 5 小時</th><td class="tabular-nums">88%</td><td>顯示未變</td></tr></tbody></table><p class="text-small">與同一 Task 上一輪卡片相比。額度由整個帳號共用，含其他 Task 與更新延遲，不是本輪專屬消耗。</p><p class="text-small">差額依來源顯示精度；顯示未變不代表沒有使用。</p></details>
+  <details class="report-context">
+    <summary>本輪主代理設定</summary>
+    <p class="report-context-single">example-model · 思考 high</p>
+    <p class="text-small">依本輪觀測順序顯示；不按設定分攤 Token。</p>
+
+  </details>
+  <details>
+    <summary>Token 明細與計量範圍</summary>
+    <dl class="report-detail">
+      <dt>主代理</dt><dd>18,400</dd>
+      <dt>子代理已觀測小計</dt><dd>6,200</dd>
+      <dt>輸入（含快取）</dt><dd>22,140</dd>
+      <dt>其中快取輸入</dt><dd>14,760</dd>
+      <dt>輸出（含思考）</dt><dd>2,460</dd>
+      <dt>其中思考 Token</dt><dd>1,230</dd>
+    </dl>
+    <div class="report-agent"><div>Example · Component review<div class="text-small">由 Example · Build a local reading list 派生 · 收到結束事件</div></div><div class="tabular-nums">6,200</div></div>
+    <p class="text-small">Task 累積取主代理原生計數器；本輪增加為本輪開始至快照的用量，兩者皆不含子代理。下方合計另加本輪已保存、按請求去重的子代理用量。資料可能延遲或缺漏，不含快照後的工具與結論。Token 不是訂閱額度或帳單；未知不代表 0。Stop 結算另存，不回寫此卡。</p>
+  </details>
+</section>
+
+<p class="example-note">Synthetic data · Real report template · Documentation frame</p>
+</main></html>

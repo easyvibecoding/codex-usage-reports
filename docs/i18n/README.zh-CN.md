@@ -1,0 +1,106 @@
+<p align="center">
+  <img src="../../docs/assets/hero.png" alt="Codex Usage Reports — 每个 Task，每一轮的用量。" width="100%">
+</p>
+
+# Codex Usage Reports
+
+**自动生成每个 Codex Task 和每一轮的 Token 用量报告。** 在简洁的本地报告中查看 Task 累计用量、单轮增量、实际观测到的模型、推理强度和子代理用量。
+
+[![CI](https://github.com/easyvibecoding/codex-usage-reports/actions/workflows/ci.yml/badge.svg)](https://github.com/easyvibecoding/codex-usage-reports/actions/workflows/ci.yml)
+[![MIT 许可证](https://img.shields.io/badge/license-MIT-mintcream)](../../LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)](../../pyproject.toml)
+
+[English](../../README.md) · [繁體中文](README.zh-TW.md) · **简体中文** · [日本語](README.ja.md)
+
+[快速开始](#快速开始) · [报告示例](#查看报告) · [使用指南](../../docs/USAGE.md) · [数字如何计算](../../docs/METRICS.md) · [故障排查](../../docs/TROUBLESHOOTING.md)
+
+## 了解每一轮用了多少
+
+一个长时间运行的 Task 可能包含多轮对话、模型切换和子代理。单个会话的总量无法说明最近一轮的变化。Codex Usage Reports 分别呈现这些范围：
+
+| 想了解什么？ | 报告会显示什么？ |
+| --- | --- |
+| 这个 Task 累计用了多少？ | 所选父 Task 实际观测到的累计 Token 用量。 |
+| 这一轮增加了多少？ | 有效原生计数器观测值之间的差值。 |
+| 使用了哪个模型和推理强度？ | 该轮观测到的设置，包括可见的设置变化。 |
+| 子代理用了多少？ | 独立的子代理用量小计，以及数据覆盖状态。 |
+| 账号还剩多少配额？ | 有可用数据时，显示原生配额观测值，并与 Task Token 用量分开呈现。 |
+| 之后还能查看吗？ | 保存在本地的 HTML、Markdown 和 JSON 报告记录。 |
+
+运行时仅使用 Python 标准库，无需调用 LLM 计算用量、无需 API 密钥，也不会将报告发送到托管分析服务。本项目从 [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget) 提取报告功能，独立运行。
+
+## 查看报告
+
+![每轮自动报告，显示 Task 累计 Token 和本轮增量](../../docs/examples/turn-en.png)
+
+*此示例使用合成数据，由实际报告模板生成，并置于独立的文档展示框中。桌面版会使用自己的外围主题。*
+
+<details>
+<summary>繁体中文示例</summary>
+
+![繁体中文每轮报告示例](../../docs/examples/turn-zh-Hant.png)
+
+</details>
+
+[打开示例集](../../docs/examples/README.md)，下载 HTML、查看完成后的报告记录和指定 Task 报告。品牌插画使用 Codex 图像生成制作；用量截图则由合成测试数据实际渲染。[美术提示词](../../docs/assets/PROMPTS.md)。
+
+## 快速开始
+
+需要 Python 3.10+，以及支持插件 hooks 的本地 Codex 环境。内嵌卡片需要支持本地可视化的桌面界面；CLI 用户可以阅读已保存的报告。原生数据结构因版本而异，请参阅[兼容性与验证](../../docs/VALIDATION.md)。
+
+### 1. 安装插件
+
+```sh
+codex plugin marketplace add easyvibecoding/codex-usage-reports
+codex plugin add codex-usage-reports@codex-usage-reports
+```
+
+在 Codex 中审查并信任插件 hooks，然后**新建一个 Task**。已安装的 hooks 会根据宿主环境的信任和生命周期规则加载。请参阅官方[插件指南](https://learn.chatgpt.com/docs/plugins)和 [hooks 指南](https://learn.chatgpt.com/docs/hooks)。
+
+### 2. 照常工作
+
+像平常一样让 Codex 处理工作。Hook 会记录该轮的基准值，要求在最终回答前生成一次卡片，并在收到支持的结束事件时保存完成后的报告记录。自动报告默认启用。
+
+内嵌卡片是最终回答**之前**截取的快照；完成后的报告记录可能包含后续用量。如果宿主环境跳过某个 hook，或尚未提供计数器，报告会将数据标记为待更新、部分可用或无法获取。
+
+### 3. 查看 Task
+
+使用随附的 `usage-report` skill，例如：
+
+> 显示这个 Task 的用量报告，包括每轮用量和实际观测到的设置。
+
+也可以克隆仓库，使用独立 CLI：
+
+```sh
+git clone https://github.com/easyvibecoding/codex-usage-reports.git
+cd codex-usage-reports
+python3 plugins/codex-usage-reports/scripts/usage_reports.py auto-report status
+python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --format markdown
+```
+
+将 `TASK_ID` 设为要查看的 Task 原生 ID。报告范围仅限于该 Task。HTML 导出、配置和卸载方法，请参阅[完整使用指南](../../docs/USAGE.md)。
+
+## 可以核查的报告
+
+- **如实呈现缺失数据。** 计数器重置、截断记录和设置冲突，都会保留为部分可用或未知。
+- **保留历史设置。** 当前的全局模型偏好不会覆盖过去某轮的观测结果。
+- **区分统计范围。** 缓存输入是输入用量的一部分；推理输出是输出用量的一部分。子代理用量和账号配额分别呈现。
+- **数据保存在本地。** 报告状态中的原生标识符会经过哈希处理；私人显示名称可能出现在你的本地报告中。
+- **轻量 hooks。** 报告出错不会拒绝工具调用或停止代理。
+- **多语言卡片。** 支持英语、繁体中文、简体中文、日语、韩语、德语、法语、西班牙语和葡萄牙语；README 提供四种语言版本。
+
+## 从 Codex Run Budget 迁移
+
+两个插件各自独立。如果保留原插件的预算控制功能，请先禁用原插件的自动报告，再启用本插件，以免出现重复卡片。不需要迁移历史数据库。[迁移说明](../../docs/MIGRATION.md)。
+
+## 限制
+
+这些报告记录实际观测到的用量，**不等同于账单或精确费用**。配额属于账号，无法仅凭 Token 总量分摊到单个 Task。子代理用量的归属取决于可获取的原生父子关系数据。Hook 的送达情况和原生数据结构都可能随 Codex 版本变化。本插件不设置预算限制，也不会中断工作。
+
+报告可能透露项目名称和使用模式。请将真实报告保存在本地；公开 issue 仅使用合成测试数据。[隐私与安全](../../SECURITY.md)。
+
+## 参与贡献
+
+请参阅 [CONTRIBUTING.md](../../CONTRIBUTING.md)、[架构](../../docs/ARCHITECTURE.md)和[验证方法](../../docs/VALIDATION.md)。欢迎提交简洁且可复现的错误报告，以及原生数据结构的兼容性修复。请勿附上真实对话记录或数据库。
+
+MIT © EasyVibeCoding contributors。独立社区项目，与 OpenAI 无隶属关系，也未获其背书。[来源与许可说明](../../NOTICE.md)。

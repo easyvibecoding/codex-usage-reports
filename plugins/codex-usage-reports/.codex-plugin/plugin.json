@@ -1,0 +1,46 @@
+{
+  "name": "codex-usage-reports",
+  "version": "0.1.0",
+  "description": "Automatic local Task and turn usage reports for Codex: native tokens, model context, subagents, and quota.",
+  "author": {
+    "name": "EasyVibeCoding",
+    "url": "https://github.com/easyvibecoding"
+  },
+  "homepage": "https://github.com/easyvibecoding/codex-usage-reports",
+  "repository": "https://github.com/easyvibecoding/codex-usage-reports",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "usage",
+    "tokens",
+    "reports",
+    "subagents",
+    "hooks",
+    "local-first"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Usage Reports",
+    "shortDescription": "Automatic Task and turn usage reports, kept local.",
+    "longDescription": "Adds automatic local reports with separate Task cumulative counters and per-turn usage, observed model and reasoning context, subagent coverage, and native account quota. No API key, model calls, token enforcement, or billing estimates.",
+    "developerName": "EasyVibeCoding",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Hooks"
+    ],
+    "websiteURL": "https://github.com/easyvibecoding/codex-usage-reports",
+    "brandColor": "#173F38",
+    "defaultPrompt": [
+      "Show the usage report for this Task.",
+      "Turn automatic usage reports on.",
+      "Show automatic report settings."
+    ],
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png",
+    "screenshots": [
+      "./assets/example-turn.png",
+      "./assets/example-task.png"
+    ]
+  }
+}

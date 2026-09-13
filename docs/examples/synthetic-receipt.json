@@ -1,0 +1,92 @@
+{
+  "key": "example",
+  "task_name": "Example · Build a local reading list",
+  "task": {
+    "display_name": "Example · Build a local reading list"
+  },
+  "task_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "turn_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+  "locale": "en",
+  "locale_source": "synthetic",
+  "usage": {
+    "total": 18400,
+    "input": 16560,
+    "cached_input": 11040,
+    "output": 1840,
+    "reasoning_output": 920
+  },
+  "usage_status": "boundary_counter_difference",
+  "task_usage": {
+    "total": 126800,
+    "input": 114120,
+    "cached_input": 76080,
+    "output": 12680,
+    "reasoning_output": 6340
+  },
+  "elapsed_seconds": 142,
+  "captured_at": "10:42:22 UTC",
+  "started_at": "2026-01-01T10:40:00Z",
+  "stopped_at": "2026-01-01T10:42:22Z",
+  "contexts": [
+    {
+      "model": "example-model",
+      "reasoning_effort": "high"
+    }
+  ],
+  "stop_contexts": [
+    {
+      "model": "example-model",
+      "reasoning_effort": "high"
+    }
+  ],
+  "contexts_limited": false,
+  "subagents": {
+    "status": "observed",
+    "usage": {
+      "total": 6200,
+      "input": 5580,
+      "cached_input": 3720,
+      "output": 620,
+      "reasoning_output": 310
+    },
+    "agents_seen": 1,
+    "agents_with_usage": 1,
+    "pending_agents": 0,
+    "missing_agents": 0,
+    "selection_limited": false,
+    "rows": [
+      {
+        "display_name": "Example · Component review",
+        "parent_name": "Example · Build a local reading list",
+        "terminal_observed": true,
+        "usage": {
+          "total": 6200,
+          "input": 5580,
+          "cached_input": 3720,
+          "output": 620,
+          "reasoning_output": 310
+        }
+      }
+    ]
+  },
+  "quota": {
+    "status": "observed",
+    "plan_type": "pro",
+    "rows": [
+      {
+        "bucket": "codex",
+        "duration_minutes": 10080,
+        "remaining_percent": 72,
+        "comparison": "observed",
+        "delta_pp": -1
+      },
+      {
+        "bucket": "codex",
+        "duration_minutes": 300,
+        "remaining_percent": 88,
+        "comparison": "unchanged",
+        "delta_pp": 0
+      }
+    ]
+  }
+}
