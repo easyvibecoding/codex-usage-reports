@@ -57,6 +57,8 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 在 Codex 中檢視並信任外掛 hooks，然後**開啟新的 Task**。已安裝的 hooks 會依執行環境的信任與生命週期規則載入。請參閱官方[外掛指南](https://learn.chatgpt.com/docs/plugins)與 [hooks 指南](https://learn.chatgpt.com/docs/hooks)。
 
+更新後，請在 Codex CLI 輸入 `/hooks`，重新檢視並信任外掛已變更的 hooks。信任綁定的是確切的 hook 定義：外掛即使已安裝並啟用，狀態為 `modified` 的 hooks 仍會被略過。重開 App 或從手機開啟 Task 都不會自動取得信任。完成檢視後，再開啟新的 Task。
+
 ### 2. 照常工作
 
 像平常一樣請 Codex 處理工作。Hook 會記錄該輪的基準值，要求在最終回答前產生一次卡片，並在收到支援的結束事件時儲存完成後的報告紀錄。自動報告預設啟用。

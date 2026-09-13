@@ -57,6 +57,8 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 在 Codex 中审查并信任插件 hooks，然后**新建一个 Task**。已安装的 hooks 会根据宿主环境的信任和生命周期规则加载。请参阅官方[插件指南](https://learn.chatgpt.com/docs/plugins)和 [hooks 指南](https://learn.chatgpt.com/docs/hooks)。
 
+更新后，请在 Codex CLI 输入 `/hooks`，重新审查并信任插件已变更的 hooks。信任绑定的是确切的 hook 定义：插件即使已安装并启用，状态为 `modified` 的 hooks 仍会被跳过。重启 App 或从手机新建 Task 都不会自动获得信任。完成审查后，再新建一个 Task。
+
 ### 2. 照常工作
 
 像平常一样让 Codex 处理工作。Hook 会记录该轮的基准值，要求在最终回答前生成一次卡片，并在收到支持的结束事件时保存完成后的报告记录。自动报告默认启用。

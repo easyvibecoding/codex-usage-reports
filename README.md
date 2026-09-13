@@ -57,6 +57,8 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 Review and trust the plugin hooks in Codex, then **start a new Task**. Installed hooks are loaded according to the host's trust and lifecycle rules. See the official [plugin guide](https://learn.chatgpt.com/docs/plugins) and [hook guide](https://learn.chatgpt.com/docs/hooks).
 
+After an update, open `/hooks` in the Codex CLI and review changed plugin hooks again. Trust is bound to the exact hook definition: an installed and enabled plugin can still have `modified` hooks that Codex skips. Restarting the app or opening a Task from a phone does not grant trust. After completing the review, start a new Task.
+
 ### 2. Work normally
 
 Ask Codex to do your usual work. The hook records a turn baseline, asks for one pre-final card, and saves a completed receipt when a supported terminal event arrives. Reporting is enabled by default.

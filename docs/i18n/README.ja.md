@@ -57,6 +57,8 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 Codex でプラグインの hooks を確認して信頼し、**新しい Task を開始**してください。インストール済みの hooks は、ホスト環境の信頼設定とライフサイクルのルールに従って読み込まれます。公式の[プラグインガイド](https://learn.chatgpt.com/docs/plugins)と [hooks ガイド](https://learn.chatgpt.com/docs/hooks)を参照してください。
 
+更新後は Codex CLI で `/hooks` を開き、変更されたプラグインの hooks を再確認して信頼してください。信頼は hook の定義にひも付きます。プラグインがインストール済みで有効でも、`modified` 状態の hooks は実行されません。アプリの再起動やスマートフォンからの Task 作成では信頼は付与されません。確認後、新しい Task を開始してください。
+
 ### 2. いつもどおりに作業する
 
 普段どおり Codex に作業を依頼してください。Hook がターン開始時の基準値を記録し、最終回答の前にカードを 1 回作成するよう依頼します。対応する終了イベントを受信すると、完了後のレポート記録を保存します。自動レポートは初期設定で有効です。

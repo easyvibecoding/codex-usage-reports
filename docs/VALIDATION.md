@@ -52,6 +52,21 @@ node scripts/check_mobile_card.cjs
 Use `BROWSER_CHANNEL=chrome` for an existing Chrome installation. CI runs this
 fragment matrix separately from the framed screenshot checks.
 
+## Post-update hook trust
+
+A post-update phone-created Task completed without starting an automatic report.
+Native `hooks/list` reported all 11 upstream Run Budget hooks as enabled but
+`modified`, with no discovery errors. This is a separate condition from card
+rendering: the installed hook definitions require a new trust review before
+execution. Installation checks and renderer checks alone do not prove that the
+host will execute an updated hook. The installed update changed only the runtime
+version and card template; changing the pinned runtime digest still changes the
+hook definition hash.
+
+Use the Codex CLI `/hooks` review flow after updates. Do not infer trust from
+`codex plugin list`, and do not replace a trust review with a bypass flag or
+manual trust-hash edits. See the [official hook trust rules](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks).
+
 ## Reproduce the source checks
 
 ```sh
