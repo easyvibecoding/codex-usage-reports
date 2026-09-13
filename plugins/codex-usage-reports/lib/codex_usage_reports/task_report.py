@@ -83,7 +83,9 @@ def _turns(root: Path, task_hash: str, limit: int) -> tuple[list, bool, str]:
         item.update(started_at=datetime.fromtimestamp(row["started"], timezone.utc).isoformat(),
                     usage=None, task_usage=None, contexts=[], usage_status="not_recorded")
         if row["state"] == "reported":
-            receipt_path = path.parent / (row["key"] + ".json")
+            reconciled = row["report"] == row["key"] + ".reconciled.md"
+            suffix = ".reconciled.json" if reconciled else ".json"
+            receipt_path = path.parent / (row["key"] + suffix)
             try:
                 descriptor = os.open(
                     receipt_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
@@ -102,7 +104,10 @@ def _turns(root: Path, task_hash: str, limit: int) -> tuple[list, bool, str]:
                             contexts=receipt.get("stop_contexts", []),
                             contexts_limited=receipt.get("contexts_limited", False),
                             usage_status=receipt.get("usage_status", "unavailable"),
-                            subagents=receipt.get("subagents"))
+                            subagents=receipt.get("subagents"),
+                            revision=receipt.get("revision", 1),
+                            reconciliation_status=receipt.get("reconciliation_status", "pending"),
+                            reconciled_at=receipt.get("reconciled_at"))
             except (OSError, ValueError, TypeError, AttributeError, RecursionError):
                 item["usage_status"] = "receipt_unavailable"
         turns.append(item)

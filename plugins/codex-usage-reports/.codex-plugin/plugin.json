@@ -1,6 +1,6 @@
 {
   "name": "codex-usage-reports",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Automatic local Task and turn usage reports for Codex: native tokens, model context, subagents, and quota.",
   "author": {
     "name": "EasyVibeCoding",

@@ -102,5 +102,13 @@
   "recorded_turns": "Recorded turns",
   "turn_record_state": "State",
   "task_report_note": "Current cumulative tokens are an observed native counter, not a lifetime total or bill. The turn table contains only locally recorded receipts, newest first; missing, pending, reset, and truncated data remain partial. Cached input and reasoning output are subsets. Native quota is account-wide, not a Task charge.",
-  "report_coverage": "Cobertura del informe"
+  "report_coverage": "Cobertura del informe",
+  "report_revision": "Revisión del informe",
+  "reconcile_heading": "Comprobación de finalización",
+  "report_updated": "Última actualización",
+  "reconcile_pending": "Instantánea provisional de Stop",
+  "reconcile_complete": "Finalización observada",
+  "reconcile_partial": "Finalización observada; evidencia parcial",
+  "note_completion": "El uso del agente principal termina en el evento explícito de finalización del turno seleccionado. El uso de los subagentes conserva la ventana original desde el inicio hasta Stop; los turnos posteriores quedan excluidos. Esto no demuestra que todo el Task haya terminado.",
+  "note_reconcile": "Una comprobación acotada en segundo plano puede publicar una revisión tras Stop al confirmar la finalización del turno, sin llamar a ningún modelo. Si falta evidencia de finalización, la instantánea de Stop sigue siendo provisional. Las tarjetas integradas conservan su instantánea original; volver a abrir el Task no garantiza que se actualicen."
 }

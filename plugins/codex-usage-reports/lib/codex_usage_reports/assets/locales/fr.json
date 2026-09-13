@@ -102,5 +102,13 @@
   "recorded_turns": "Recorded turns",
   "turn_record_state": "State",
   "task_report_note": "Current cumulative tokens are an observed native counter, not a lifetime total or bill. The turn table contains only locally recorded receipts, newest first; missing, pending, reset, and truncated data remain partial. Cached input and reasoning output are subsets. Native quota is account-wide, not a Task charge.",
-  "report_coverage": "Couverture du rapport"
+  "report_coverage": "Couverture du rapport",
+  "report_revision": "Version du rapport",
+  "reconcile_heading": "Vérification de fin",
+  "report_updated": "Dernière mise à jour",
+  "reconcile_pending": "Instantané Stop provisoire",
+  "reconcile_complete": "Fin observée",
+  "reconcile_partial": "Fin observée ; preuves partielles",
+  "note_completion": "L’utilisation de l’agent principal s’arrête à l’événement explicite de fin du tour sélectionné. L’utilisation des sous-agents conserve la fenêtre initiale du début à Stop ; les tours suivants sont exclus. Cela ne prouve pas que l’ensemble du Task est terminé.",
+  "note_reconcile": "Une vérification limitée en arrière-plan peut publier une version révisée après Stop, une fois la fin du tour confirmée, sans appeler de modèle. En l’absence de preuve de fin, l’instantané Stop reste provisoire. Les cartes intégrées conservent leur instantané initial ; rouvrir le Task ne garantit pas leur actualisation."
 }

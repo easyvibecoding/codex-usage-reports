@@ -18,6 +18,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", choices=EVENTS)
     parser.add_argument("--preview", nargs=2, metavar=("TASK", "TURN"))
+    parser.add_argument("--reconcile", action="store_true")
     parser.add_argument("--output-dir")
     parser.add_argument("--data-dir")
     parser.add_argument("--codex-home")
@@ -27,7 +28,7 @@ def main() -> int:
     try:
         if args.preview is not None:
             from .auto_preview import preview
-            if args.event or not args.output_dir:
+            if args.event or args.reconcile or not args.output_dir:
                 raise ValueError("preview requires an output directory")
             result = preview(root, *args.preview, output_dir=Path(args.output_dir), home=home)
         else:
@@ -37,11 +38,17 @@ def main() -> int:
             payload = json.loads(raw.decode("utf-8"))
             if not isinstance(payload, dict) or not payload.get("session_id"):
                 raise ValueError("missing identity")
+            if args.reconcile:
+                from .reconcile import worker
+                worker(payload, root, home=home)
+                return 0
             if args.event and payload.get("hook_event_name") != args.event:
                 raise ValueError("event mismatch")
             if payload.get("hook_event_name") not in EVENTS:
                 raise ValueError("unsupported event")
             result = handle(payload, root, home=home) or {}
+            from .reconcile import schedule
+            schedule(payload, root, home=home)
     except Exception:
         result = ({"status": "unavailable", "reason": "preview not generated; do not retry"}
                   if args.preview else {})

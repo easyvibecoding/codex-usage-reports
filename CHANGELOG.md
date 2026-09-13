@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-09-13
+
+- Add one bounded local completion worker after each reported Stop: up to eight scans with a 25-second retry deadline, without calling a model or continuing a Task.
+- Reconcile only through the selected turn's explicit native `task_complete` boundary, preserving the original child attribution window and partial-data handling.
+- Publish separate revision 2 JSON, HTML, and Markdown receipts; preserve all original Stop JSON/HTML/Markdown files and use the latest published revision in fresh selected-Task reports.
+- Keep inline preview files immutable. A phone remote A/B experiment showed that a new reference read updated content while the original card retained its earlier snapshot after Task re-entry.
+- Explain completion revisions, bounded retries, and inline refresh limits consistently in all four READMEs and troubleshooting documentation.
+
 ## 0.1.1 — 2026-09-13
 
 - Make inline report text readable when a remote host omits or misbinds theme colors, using paired browser system colors and scoped typography.

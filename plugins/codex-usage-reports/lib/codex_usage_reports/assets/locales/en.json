@@ -102,5 +102,13 @@
   "recorded_turns": "Recorded turns",
   "turn_record_state": "State",
   "task_report_note": "Current cumulative tokens are an observed native counter, not a lifetime total or bill. The turn table contains only locally recorded receipts, newest first; missing, pending, reset, and truncated data remain partial. Cached input and reasoning output are subsets. Native quota is account-wide, not a Task charge.",
-  "report_coverage": "Report coverage"
+  "report_coverage": "Report coverage",
+  "report_revision": "Report revision",
+  "reconcile_heading": "Completion check",
+  "report_updated": "Last updated",
+  "reconcile_pending": "Provisional Stop snapshot",
+  "reconcile_complete": "Completion observed",
+  "reconcile_partial": "Completion observed; partial evidence",
+  "note_completion": "Parent usage ends at the selected turn’s explicit completion event. Subagent usage retains the original start-to-Stop window; subsequent turns are excluded. This is not proof the entire Task is finished.",
+  "note_reconcile": "A bounded background check can publish a completion revision after Stop, without a model call. Missing completion evidence leaves the Stop snapshot provisional. Inline cards keep their original snapshot; reopening the Task does not guarantee a refresh."
 }

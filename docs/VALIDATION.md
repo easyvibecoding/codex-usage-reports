@@ -1,5 +1,44 @@
 # Validation and compatibility
 
+## 0.2.0 completion reconciliation
+
+Verified on macOS with Codex CLI 0.154.0 and Python 3.12.8:
+
+- 173 unit/integration tests passed, including 14 completion-boundary and 18
+  background-worker cases. Ruff, packaging validation, nine-locale parity,
+  documentation checks and the Plugin Creator validator passed.
+- A fresh isolated Codex home installed 0.2.0 from the local marketplace. Its
+  real installed bootstrap commands handled start and Stop, launched the pinned
+  background runtime, and returned Stop in 0.0864 seconds. Synthetic turn usage
+  increased from 200 to 500 after an explicit completion event; a following
+  turn's counter of 9,999,000 was excluded. The installed CLI read revision 2.
+  All original Stop JSON, HTML and Markdown bytes remained unchanged.
+- Independent fault injection delayed the child catalog beyond the deadline:
+  the worker exited after 25.012 seconds as `expired`, with zero publication
+  calls. A dedicated deadline exception bypasses ordinary collector error
+  handlers. Concurrent edits and symlinks at the original report are preserved
+  because completion publication never writes original Stop files.
+- A read-only check of this installation's actual native completion record
+  returned `completion_observed=true`. Its bounded tail remained partial; this
+  check is not a complete accounting claim or a new live model conversation.
+
+The installed runtime SHA-256 was
+`ad0a6916d3e33861c90f6045a921a4dc85e21dee8a52601fd6e0260674338e52`.
+
+### Phone same-path experiment
+
+The user confirmed the first inline card displayed synthetic version A / 100.
+After overwriting that same HTML path with B / 250, a new reference displayed B,
+but the original card still displayed A after navigating away and returning.
+One intermediate return also showed no card. This demonstrates readable updated
+source with a fresh reference, not reliable refresh of an existing phone card.
+The implementation therefore preserves inline snapshots and publishes a separate
+completion revision selected by subsequent Task-report queries.
+
+Screenshots and raw native records stay private and are not committed. These
+findings apply to this tested host/session; they do not establish universal
+mobile behavior. The maintainer's active plugin is separate from isolated tests.
+
 ## Release environment
 
 The 0.1.0 extraction was verified on macOS with Codex CLI 0.154.0 and Python 3.12.8.

@@ -61,9 +61,11 @@ After an update, open `/hooks` in the Codex CLI and review changed plugin hooks 
 
 ### 2. Work normally
 
-Ask Codex to do your usual work. The hook records a turn baseline, asks for one pre-final card, and saves a completed receipt when a supported terminal event arrives. Reporting is enabled by default.
+Ask Codex to do your usual work. The hook records a turn baseline, asks for one pre-final card, and saves a receipt when a supported terminal event arrives. Reporting is enabled by default.
 
-The inline card is a snapshot taken **before** the final answer. The completed receipt may contain later usage. If the host skips a hook or does not yet expose counters, the report marks the data as pending, partial, or unavailable.
+After `Stop`, one local Python worker checks for that turn's native `task_complete` record, with at most eight bounded scans and a 25-second retry deadline. It does not call a model or continue the Task. Once the completion boundary is observed, it saves a revised receipt that can include final-answer usage without counting the next turn. Missing or incomplete evidence stays pending or partial; disabling automatic reports also stops further reconciliation.
+
+The inline card remains a snapshot taken **before** the final answer. Original Stop JSON, HTML, and Markdown receipts are preserved; a fresh Task-report query selects the latest published revision. Replacing the card's HTML file does not reliably refresh an existing card: in a phone remote A/B experiment, the original card kept version A after re-entering the Task, while a new reference displayed version B. Automatic replacement of existing inline cards is therefore not enabled. See [reconciliation and preview behavior](docs/ARCHITECTURE.md#completion-reconciliation).
 
 ### 3. Inspect a Task
 
@@ -86,6 +88,7 @@ Set `TASK_ID` to the native ID of the Task you want to inspect. The report stays
 
 - **Honest missing data.** Counter resets, truncated records, and conflicting settings stay partial or unknown.
 - **Historical settings.** Today's global model preference never replaces a past turn's observation.
+- **Completion checks.** A bounded local worker reconciles later native records; original Stop JSON/HTML/Markdown receipts and inline snapshots are preserved.
 - **Separate scopes.** Cached input is a subset of input; reasoning output is a subset of output. Child usage and account quota remain distinct.
 - **Local files.** Native identifiers are hashed in report state. Private display names may appear in your local reports.
 - **Lightweight hooks.** Reporting errors do not deny tools or stop the agent.

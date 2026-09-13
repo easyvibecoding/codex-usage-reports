@@ -102,5 +102,13 @@
   "recorded_turns": "已記錄回合",
   "turn_record_state": "狀態",
   "task_report_note": "目前累計 token 是原生計數器的觀測值，不代表完整歷史總量或帳單。回合表只列出本機已記錄的收據，由新到舊；缺失、待寫入、重置與截斷資料保留為不完整。快取輸入和推理輸出是子集合。原生配額是帳戶共用額度，並非 Task 費用。",
-  "report_coverage": "報告涵蓋狀態"
+  "report_coverage": "報告涵蓋狀態",
+  "report_revision": "報告版本",
+  "reconcile_heading": "結束後核對",
+  "report_updated": "最後更新時間",
+  "reconcile_pending": "Stop 暫定快照",
+  "reconcile_complete": "已觀測回合完成",
+  "reconcile_partial": "已觀測回合完成；資料仍不完整",
+  "note_completion": "主代理用量截止於指定回合的明確完成事件；子代理保留原本開始至 Stop 的時間範圍，排除後續回合。這不代表整個 Task 已完成。",
+  "note_reconcile": "Stop 後會以有界背景核對產生結算版，不呼叫模型。缺少完成證據時保留暫定快照。內嵌卡片保留原始快照，重進 Task 不保證刷新。"
 }
