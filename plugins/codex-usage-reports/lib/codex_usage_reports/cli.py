@@ -21,6 +21,8 @@ def main(argv=None) -> int:
     parser.add_argument("--codex-home", type=Path, help="Read native Codex state here")
     parser.add_argument("--locale", choices=LOCALES, help="Override report display language")
     commands = parser.add_subparsers(dest="command", required=True)
+    from .exec_activity_cli import add_parser
+    add_parser(commands)
     auto = commands.add_parser("auto-report", help="Manage automatic per-turn reports")
     actions = auto.add_subparsers(dest="action", required=True)
     for action in ("status", "on", "off", "list"):
@@ -42,6 +44,9 @@ def main(argv=None) -> int:
     if args.locale:
         os.environ["CODEX_USAGE_REPORTS_LOCALE"] = args.locale
     try:
+        if args.command == "exec-activity":
+            from .exec_activity_cli import run
+            return run(args, root)
         if args.command == "auto-report":
             current = settings(root)
             if args.action in ("on", "off", "threshold"):

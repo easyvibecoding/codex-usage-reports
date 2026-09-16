@@ -1,5 +1,36 @@
 # Validation and compatibility
 
+## 0.3.0 project exec activity
+
+Validated on macOS, Python 3.12.8 and Codex CLI 0.154.0 on 2026-09-16.
+
+- All 198 unit/integration tests passed. New coverage uses synthetic catalogs
+  and real local subprocesses for exact project scope, foreign metadata, symlinks,
+  native/legacy counter separation, same-source resets, distinct resume launch
+  attribution, private hashed state, hook notice deduplication, partial rendering,
+  exit propagation, ambiguous JSON usage and nonblocking telemetry failures.
+- Ruff, repository/runtime validation and Plugin Creator validation passed.
+- Fresh isolated Codex homes installed the plugin from its local marketplace.
+  The installed bootstrap and pinned runtime emitted one exec notice after a
+  synthetic catalog insertion and none on repetition. The post-tool call took
+  0.0820 seconds in this small fixture; this is not a production latency bound.
+- Installed CLI list/render and source identity read-back passed. An installed
+  launcher invoked the real Codex binary with `exec --help`, forwarded its output
+  and recorded start/exit with status 0. This smoke made no model request.
+- Read-only parsing of one selected real native exec session found its metadata
+  and completion event. Parent ownership and missing usage stayed unknown. No
+  real transcript, identifier, path or generated report is included here.
+
+Installed runtime SHA-256:
+`25b65703d01bb6b08dafcfab405f86e2a15fffe00e5fd7b19de9fdea1440641a`.
+
+The hook test uses synthetic native state and actual installed hook commands; it
+does not prove every Desktop host delivers or displays every hook event. Native
+turn completion does not prove process exit. Only instrumented launches retain
+receipts for ephemeral runs; no background service or shared-budget enforcement
+was added. The maintainer's active plugin setup was not changed.
+
+
 ## 0.2.1 counter-source isolation
 
 - 182 unit/integration tests passed locally. Coverage includes positive and

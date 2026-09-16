@@ -1,6 +1,6 @@
 ---
 name: usage-report
-description: Show the current or one explicitly selected Codex Task's usage report, or configure automatic Task and turn reports. Use for task tokens, observed model and reasoning, subagent coverage, and auto-report on, off, threshold, or status. Never default to scanning unrelated Task history.
+description: Show a selected Codex Task's usage, configure automatic reports, or inspect codex exec activity in one project. Use for tokens, observed settings, subagent coverage, extra exec launches and project activity. Never default to unrelated Task history.
 ---
 
 # Codex Usage Reports
@@ -9,6 +9,27 @@ Use the bundled reporting CLI from this plugin root. No API key or model calls
 are needed. Reports observe usage; they do not stop, steer, or budget agent work.
 
 ## Choose scope
+
+For an exec-activity request, use the user's selected project directory (current
+workspace when unambiguous) instead of requiring a Task ID. From the plugin root:
+
+```sh
+python3 scripts/usage_reports.py exec-activity list --project "$PROJECT_DIR" --format json
+python3 scripts/usage_reports.py exec-activity watch --project "$PROJECT_DIR" --duration 60
+python3 scripts/usage_reports.py exec-activity run --project "$PROJECT_DIR" -- --ephemeral "Summarize the repository"
+```
+
+Set `PROJECT_DIR` to the selected project, not the plugin directory.
+`list` is the default for investigation. Use foreground `watch` when monitoring
+is requested. Use `run` only for an already authorized exec invocation; a request
+to inspect activity does not authorize launching model work. It emits start/exit
+receipts and preserves JSON output and exit status, including ephemeral runs.
+`--parent-task` or inherited `CODEX_THREAD_ID` is labelled launcher evidence,
+not native child lineage. Same-project activity never implies ownership.
+Keep session cumulative and invocation usage separate from parent/child totals;
+last-turn events do not prove process liveness. Missing or capped data stays
+unknown/partial. Hooks report new sessions at tool-return boundaries, not while
+idle; no daemon or scheduled monitor is installed.
 
 Use the current native Task UUID from the task context, or one explicitly named
 by the user. If neither is available, ask for the Task ID. Never substitute an

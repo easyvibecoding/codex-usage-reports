@@ -47,6 +47,8 @@ def main() -> int:
             if payload.get("hook_event_name") not in EVENTS:
                 raise ValueError("unsupported event")
             result = handle(payload, root, home=home) or {}
+            from .exec_activity import add_notice
+            result = add_notice(result, payload, root, home=home)
             from .reconcile import schedule
             schedule(payload, root, home=home)
     except Exception:

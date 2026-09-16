@@ -1,6 +1,6 @@
 {
   "name": "codex-usage-reports",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Automatic local Task and turn usage reports for Codex: native tokens, model context, subagents, and quota.",
   "author": {
     "name": "EasyVibeCoding",
@@ -34,7 +34,8 @@
     "defaultPrompt": [
       "Show the usage report for this Task.",
       "Turn automatic usage reports on.",
-      "Show automatic report settings."
+      "Show automatic report settings.",
+      "Show codex exec activity for this project, with launcher attribution and separate usage."
     ],
     "composerIcon": "./assets/icon.png",
     "logo": "./assets/icon.png",

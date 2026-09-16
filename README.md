@@ -14,6 +14,10 @@
 
 [Quick start](#quick-start) · [Examples](#see-the-report) · [User guide](docs/USAGE.md) · [How the numbers work](docs/METRICS.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
+## Project exec activity
+
+Inspect extra `codex exec` sessions by working directory, watch for changes in the foreground, or use the optional launcher to retain start/exit and usage receipts for ephemeral runs. Hooks notify at tool-return boundaries after an updated hook review and a new Task. Launcher attribution stays distinct from native child lineage; exec usage is separate from parent totals. [Commands and coverage](docs/EXEC_ACTIVITY.md).
+
 ## Know what each turn used
 
 A long Task can include many turns, model switches, and child agents. A single session total does not explain the latest change. Codex Usage Reports keeps those scopes visible:

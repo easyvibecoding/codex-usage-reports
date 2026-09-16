@@ -23,7 +23,7 @@ EVENTS = (
 MODULES = (
     "__init__.py", "transcript.py", "util.py", "hook_adapter.py",
     "auto_report.py", "auto_preview.py", "reconcile.py", "task_catalog.py", "child_usage.py",
-    "report_i18n.py",
+    "report_i18n.py", "exec_activity.py",
     "turn_quota.py", "quota_view.py", "meter_source.py", "meter_plan.py",
 )
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- Add project-scoped exec activity lists, foreground change monitoring and an optional
+  launcher with private start/exit receipts, including ephemeral runs.
+- Add nonblocking, deduplicated hook notices at tool-return boundaries.
+- Keep launcher attribution, native child lineage and usage scopes distinct;
+  preserve unknown/partial observations and all existing budget decisions.
+
+
 ## 0.2.1 — 2026-09-13
 
 - Fix false unobserved turn usage when native request totals and legacy token-count events use different historical baselines.
