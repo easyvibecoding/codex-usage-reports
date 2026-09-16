@@ -1,5 +1,38 @@
 # Validation and compatibility
 
+## 0.5.0 signed updates and native trust continuity
+
+Validated on macOS, Python 3.12.8 and Codex CLI 0.154.0 on 2026-09-17.
+
+- All 222 unit/integration tests passed, including independent OpenSSL signing,
+  actual fixed-command execution of signed A/B runtimes, old Task pin retention,
+  signature/payload/metadata rejection, anti-replay rollback, corrupt-cache
+  fallback, disabled and in-flight updates, private hashed state, future entry
+  migrations, bounded worker scheduling, and the packaged hook/CLI.
+- Ruff, deterministic artifacts, signed manifest/runtime verification, plugin
+  validation and the staged sensitive-data scan passed.
+- A real native CLI canary installed `0.5.0+canary.A` in a disposable
+  Codex home. Trust grants were seeded once in that isolated fixture only.
+  The installed `UserPromptSubmit` command started its ordinary background worker,
+  fetched the signed `0.5.0` runtime from the public GitHub `main`
+  endpoint, and activated its exact published digest. No model call was made.
+- A new synthetic Task's actual hook executed the published runtime. The older
+  Task's verified pin remained on A. Native `hooks/list` reported all
+  **8 hooks enabled and trusted**, with identical hashes before and after
+  the automatic update. The entire isolated native config file was unchanged.
+- A subsequent normal package reinstall from A to the published version also
+  preserved all native hook hashes and trust states without another grant.
+
+Published runtime SHA-256:
+`9aa51aad7104c062ac1704d7ca8d2d28add2ac01b5c4a28450af43a46694cdd0`.
+
+This proves real download/verification/activation, installed hook execution and
+native trust classification. It is not a model-driven Desktop rendering test.
+Migrating an existing pre-publisher installation still requires one review of the
+new fixed entry. Future hook/key/entry changes require their own native review.
+See [signed update controls and boundaries](SIGNED_UPDATES.md).
+
+
 ## 0.4.0 first-prompt update and trust notices
 
 Validated on macOS, Python 3.12.8 and Codex CLI 0.154.0 on 2026-09-17.
