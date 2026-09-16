@@ -18,6 +18,15 @@
 
 Inspect extra `codex exec` sessions by working directory, watch for changes in the foreground, or use the optional launcher to retain start/exit and usage receipts for ephemeral runs. Hooks notify at tool-return boundaries after an updated hook review and a new Task. Launcher attribution stays distinct from native child lineage; exec usage is separate from parent totals. [Commands and coverage](docs/EXEC_ACTIVITY.md).
 
+## Update reminders
+
+The first prompt in each Task checks for plugin updates and hooks awaiting trust.
+After updating, open a terminal, run `codex`, enter `/hooks`, and review/trust the
+changed hooks. A separate reminder can stay trusted across routine updates;
+**trust this new reminder once when first installing this version**. Checks are
+cached, nonblocking, and make no model calls. No update or trust is automatic.
+[Coverage, manual checks, and disabling notices](docs/UPDATE_NOTICES.md).
+
 ## Know what each turn used
 
 A long Task can include many turns, model switches, and child agents. A single session total does not explain the latest change. Codex Usage Reports keeps those scopes visible:

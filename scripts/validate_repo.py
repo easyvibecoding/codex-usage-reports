@@ -53,6 +53,8 @@ def main() -> int:
     assert len(entries) == 1, "marketplace plugin must be unique"
     assert entries[0]["source"]["path"] == "./plugins/codex-usage-reports"
     assert set(hooks["hooks"]) == set(EVENTS), "unexpected hook events"
+    assert not {"update_notice.py", "update_cli.py"}.intersection(MODULES), (
+        "update checker must remain outside the reporting hook runtime")
     for event, groups in hooks["hooks"].items():
         for group in groups:
             for hook in group["hooks"]:

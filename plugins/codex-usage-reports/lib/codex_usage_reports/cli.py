@@ -23,6 +23,8 @@ def main(argv=None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     from .exec_activity_cli import add_parser
     add_parser(commands)
+    from .update_cli import add_parser as add_update_parser
+    add_update_parser(commands)
     auto = commands.add_parser("auto-report", help="Manage automatic per-turn reports")
     actions = auto.add_subparsers(dest="action", required=True)
     for action in ("status", "on", "off", "list"):
@@ -44,6 +46,9 @@ def main(argv=None) -> int:
     if args.locale:
         os.environ["CODEX_USAGE_REPORTS_LOCALE"] = args.locale
     try:
+        if args.command == "updates":
+            from .update_cli import run
+            return run(args, root)
         if args.command == "exec-activity":
             from .exec_activity_cli import run
             return run(args, root)

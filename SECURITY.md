@@ -8,6 +8,12 @@ The report store contains hashed identity keys, timing baselines, counters, stat
 
 This does not anonymize every report: project names, times, models, and usage patterns can be sensitive. Keep generated reports outside Git. The repository includes only synthetic examples.
 
+The separate first-prompt update checker fetches only this plugin's public
+GitHub manifest, with a six-hour cache. No Task ID, project path, prompt, or usage
+is sent. Its embedded command does not execute newly installed plugin code and
+never changes native hook trust. Set `CODEX_PLUGIN_UPDATE_NOTICES=0` to disable
+automatic checks. See [update notices](docs/UPDATE_NOTICES.md) for scope and limits.
+
 ## Boundaries
 
 Reporting hooks do not deny tools, apply budgets, or stop the agent. Corrupt data should produce unavailable/partial evidence or a nonblocking reporting failure. Output directory validation, restrictive file modes, bounded reads, identifier hashing, and SHA-256-pinned runtimes reduce accidental exposure and cache drift.

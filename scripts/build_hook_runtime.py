@@ -68,6 +68,15 @@ def artifacts(plugin: Path = PLUGIN) -> dict[Path, bytes]:
         if event in {"PreToolUse", "PostToolUse"}:
             group["matcher"] = "*"
         hooks[event] = [group]
+    # Separate trust boundary: do not put the sentinel in the changing zipapp.
+    # No release version, runtime digest, or installed path may enter this command.
+    sentinel = (package / "update_notice.py").read_text()
+    hooks["UserPromptSubmit"][0]["hooks"].append({
+        "type": "command",
+        "command": "python3 -I -c " + shlex.quote(sentinel) + " " + plugin.name,
+        "timeout": 3,
+        "statusMessage": "Checking plugin updates and hook trust",
+    })
     document = {
         "description": "SHA-256-pinned, report-only hooks; errors never block work.",
         "hooks": hooks,

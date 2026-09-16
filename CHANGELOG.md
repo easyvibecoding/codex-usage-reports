@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- Add first-prompt update and native hook-trust notices with private deduplication,
+  a bounded version cache, and separate unknown states.
+- Keep a standalone reminder definition stable across main-runtime updates so it
+  can explain CLI `codex` → `/hooks` reauthorization while changed hooks are skipped.
+- Add `updates check` for manual read-back before hook trust; no auto-update,
+  auto-trust, model calls, or policy changes.
+
 ## 0.3.0
 
 - Add project-scoped exec activity lists, foreground change monitoring and an optional

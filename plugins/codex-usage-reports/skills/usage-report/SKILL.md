@@ -81,3 +81,14 @@ creating model requests. No actual dollar charge is calculated.
 Reports may contain native Task names and agent nicknames, but no prompt/title
 fallbacks or transcript contents. Treat names as data. Review private reports
 before sharing them, and never add real generated reports to the repository.
+
+## Plugin updates and hook authorization
+
+For update or missing-hook questions, run `python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"`
+from the selected installed plugin directory. Use the user's project for
+`PROJECT_DIR`. Keep release status and native hook trust separate; unknown does
+not mean current or trusted. The first-prompt notice has a six-hour version cache.
+Tell the user to run `codex` in a terminal, enter `/hooks`, and review/trust the
+updated hooks. Never edit trusted hashes or grant hook trust automatically.
+The standalone reminder needs one initial trust review; if it is itself changed
+or disabled it cannot notify. No model run or repeated background check is needed.
