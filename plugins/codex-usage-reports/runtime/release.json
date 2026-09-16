@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "plugin": "codex-usage-reports",
+  "channel": "stable",
+  "version": "0.5.0",
+  "sequence": 1789578569,
+  "bootstrap_sha256": "7e529b8c8946c4b8a59fe91ae9d609c17931e99d232cc035dfc3228e0f36091f",
+  "runtime_sha256": "9aa51aad7104c062ac1704d7ca8d2d28add2ac01b5c4a28450af43a46694cdd0",
+  "runtime_size": 330843,
+  "signature": "Xx1Pxksn/nWsT+GcGrYV8z4b+MikWQcVKO+eIPDLwRer2/oJNP7juRxaGE8GXxx445dRysZC+Mrw6R1dqc9sZcnb/AxEE7CkaEiTTT+8cozy+6HMDXlm0LLpjtfu3VbDcTci6aOPAJBwiWPRMhQMGIU09ByIxIPt9Va5Ny9wcQJCInGg7JgUzTTuoATBiXFDRolndRgwWiTYDTxMyh++GZ0XUd9ROMIODogaDSWjfZNV6RBdbzHjwURLjkVlZVrexhSUp0rf4ehc0KrcMr7koRpzl23OC25qYnZsxficKNZx2CEkwH6COjbGouqq9a+d1vmcUiSNvSKf+jTZ7uBhpQGvb6JV6A2PTmGndhjN2R+IBhvjczRQiO4VMphBFqsY4zP8yejee4TjNyFWcoNlkooOQvMg444yqC+FQywvz+XabjLsI2n2/DP/dQHQl+x/kxFj5fUGyuc61tgdVh4w4G+2tzIn7L/IKNJH2K1/gOCe6rbnH9K45ubcW/ShnWn7"
+}

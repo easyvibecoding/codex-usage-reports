@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import sys
@@ -37,8 +36,8 @@ class BootstrapTest(unittest.TestCase):
             "id": "example-bootstrap-task"}}) + "\n")
 
     def invoke(self, event, *, raw=None, **extra):
-        command = shlex.split(self.hooks[event][0]["hooks"][0]["command"])
-        command[0] = sys.executable
+        command = [sys.executable, "-I", "-c",
+                   (PLUGIN / "scripts/bootstrap.py").read_text(), event, self.digest]
         payload = {"session_id": "example-bootstrap-task", "hook_event_name": event,
                    "transcript_path": str(self.page), "turn_id": "example-turn", **extra}
         result = subprocess.run(command, input=raw if raw is not None else json.dumps(payload),

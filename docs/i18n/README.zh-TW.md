@@ -14,11 +14,11 @@
 
 [快速開始](#快速開始) · [報告範例](#看看報告) · [使用教學](../../docs/USAGE.md) · [數字如何計算](../../docs/METRICS.md) · [疑難排解](../../docs/TROUBLESHOOTING.md)
 
-## 更新提醒
+## 自動更新與一次授權
 
-每個任務的首回合會檢查外掛更新與 hooks 授權狀態。更新後，在終端輸入 `codex`，再進入 `/hooks` 檢查並信任更新的 hooks。獨立提醒 hook 可在一般功能更新後保留信任；**第一次安裝這個版本時，提醒 hook 本身仍須信任一次**。檢查有快取、不阻擋工作、不呼叫模型，也不會自動更新或授權。
+首次安裝這版後，在 CLI 輸入 `codex` → `/hooks`，檢視並信任固定入口。之後一般執行程式與 CLI 更新沿用相同的 hook 定義，不必再授權；這表示同意執行同一發布者未來簽署的程式。預設在送出提示時啟動背景檢查，每六小時最多一次，只有簽章與檔案雜湊都通過的版本才會套用。新任務使用新版並顯示已驗證版本，進行中的任務保留原版。
 
-[詳細 / Details](../UPDATE_NOTICES.md).
+新增 hook、變更入口或金鑰，以及外掛／skill 結構更新，仍須更新外掛並檢視已變更的 hooks。工具不會修改 Codex 的信任紀錄。在已安裝外掛目錄執行 `python3 scripts/publisher_updates.py status` 可讀取實際版本；將 `status` 換成 `off`、`on`、`update` 或 `rollback` 可停用、啟用、手動更新或回退。Plugins 頁面可能仍顯示原安裝版本。[更新機制與操作](../SIGNED_UPDATES.md) · [授權提醒](../UPDATE_NOTICES.md)。
 
 ## 專案 exec 活動
 
@@ -67,7 +67,7 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 在 Codex 中檢視並信任外掛 hooks，然後**開啟新的 Task**。已安裝的 hooks 會依執行環境的信任與生命週期規則載入。請參閱官方[外掛指南](https://learn.chatgpt.com/docs/plugins)與 [hooks 指南](https://learn.chatgpt.com/docs/hooks)。
 
-更新後，請在 Codex CLI 輸入 `/hooks`，重新檢視並信任外掛已變更的 hooks。信任綁定的是確切的 hook 定義：外掛即使已安裝並啟用，狀態為 `modified` 的 hooks 仍會被略過。重開 App 或從手機開啟 Task 都不會自動取得信任。完成檢視後，再開啟新的 Task。
+若更新變更了 hook 定義，請在 Codex CLI 輸入 `/hooks`，重新檢視並信任外掛已變更的 hooks。信任綁定的是確切的 hook 定義：外掛即使已安裝並啟用，狀態為 `modified` 的 hooks 仍會被略過。重開 App 或從手機開啟 Task 都不會自動取得信任。完成檢視後，再開啟新的 Task。
 
 ### 2. 照常工作
 

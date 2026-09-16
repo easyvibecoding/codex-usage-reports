@@ -234,7 +234,7 @@ class UpdateNoticeTest(unittest.TestCase):
         (destination / ".codex-plugin/plugin.json").write_text(
             json.dumps({"name": NAME, "version": "99.0.0"}))
         after = hooks()
-        self.assertNotEqual(before[0]["command"], after[0]["command"])
+        self.assertEqual(before[0]["command"], after[0]["command"])
         self.assertEqual(before[1], after[1])
         # Execute the actual embedded command with broken/new package code.
         (package / "update_notice.py").write_text('raise RuntimeError("must not execute")')

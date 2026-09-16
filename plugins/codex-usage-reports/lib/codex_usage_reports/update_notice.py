@@ -202,10 +202,13 @@ def summarize_hooks(result, plugin):
     return {"status": status, "enabled": len(enabled), "needs_review": pending}
 
 
-def check(db, plugin, directory, cwd, home, *, refresh=False, offline=False):
+def check(db, plugin, directory, cwd, home, *, refresh=False, offline=False,
+          signed_runtime=False):
     current, _ = installed(plugin, directory)
-    available, source = latest(db, plugin, time.time(), refresh=refresh, offline=offline)
-    release = ("unknown" if version(available) is None else
+    available, source = ((None, "signed_runtime") if signed_runtime else
+                         latest(db, plugin, time.time(), refresh=refresh, offline=offline))
+    release = ("managed_by_signed_runtime" if signed_runtime else
+               "unknown" if version(available) is None else
                "update_available" if version(available) > version(current) else
                "current" if version(available) == version(current) else "ahead")
     trust = hook_status(plugin, cwd, home)
@@ -244,7 +247,8 @@ def hook(plugin, payload):
     try:
         if not claim(db, task, identity, time.time()):
             return {}
-        result = check(db, plugin, directory, Path(payload.get("cwd") or os.getcwd()), home)
+        result = check(db, plugin, directory, Path(payload.get("cwd") or os.getcwd()), home,
+                       signed_runtime=(directory / "runtime/publisher.json").is_file())
     finally:
         db.close()
     message = "\n".join(result["messages"])

@@ -10,6 +10,7 @@ from pathlib import Path
 from string import Formatter
 
 from build_hook_runtime import EVENTS, MODULES, artifacts
+from publisher_release import validate as validate_release
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins/codex-usage-reports"
@@ -80,6 +81,7 @@ def main() -> int:
             assert (PLUGIN / manifest["interface"][field]).is_file(), f"missing asset: {field}"
     skill = (PLUGIN / "skills/usage-report/SKILL.md").read_text()
     assert skill.startswith("---\nname: usage-report\n"), "skill frontmatter invalid"
+    validate_release(PLUGIN)
     validate_catalogs()
     print("Repository validation passed: independent report-only runtime and nine locales.")
     return 0

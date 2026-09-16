@@ -14,11 +14,11 @@
 
 [快速开始](#快速开始) · [报告示例](#查看报告) · [使用指南](../../docs/USAGE.md) · [数字如何计算](../../docs/METRICS.md) · [故障排查](../../docs/TROUBLESHOOTING.md)
 
-## 更新提醒
+## 自动更新与一次授权
 
-每个任务的首回合会检查插件更新与 hooks 授权状态。更新后，在终端输入 `codex`，再进入 `/hooks` 检查并信任更新的 hooks。独立提醒 hook 可在常规功能更新后保留信任；**首次安装此版本时，提醒 hook 本身仍须信任一次**。检查有缓存、不阻止工作、不调用模型，也不会自动更新或授权。
+首次安装此版本后，在 CLI 输入 `codex` → `/hooks`，检查并信任固定入口。此后常规运行程序与 CLI 更新沿用相同的 hook 定义，无需重新授权；这表示同意执行同一发布者未来签署的程序。默认在提交提示时启动后台检查，每六小时最多一次，只有签名和文件哈希都通过的版本才会启用。新任务使用新版并显示已验证版本，进行中的任务保留原版。
 
-[詳細 / Details](../UPDATE_NOTICES.md).
+新增 hook、更改入口或密钥，以及插件／skill 结构更新，仍须更新插件并检查变更的 hooks。工具不会修改 Codex 的信任记录。在已安装插件目录执行 `python3 scripts/publisher_updates.py status` 可读取实际版本；将 `status` 换成 `off`、`on`、`update` 或 `rollback` 可禁用、启用、手动更新或回退。Plugins 页面可能仍显示原安装版本。[更新机制与操作](../SIGNED_UPDATES.md) · [授权提醒](../UPDATE_NOTICES.md)。
 
 ## 项目 exec 活动
 
@@ -67,7 +67,7 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 在 Codex 中审查并信任插件 hooks，然后**新建一个 Task**。已安装的 hooks 会根据宿主环境的信任和生命周期规则加载。请参阅官方[插件指南](https://learn.chatgpt.com/docs/plugins)和 [hooks 指南](https://learn.chatgpt.com/docs/hooks)。
 
-更新后，请在 Codex CLI 输入 `/hooks`，重新审查并信任插件已变更的 hooks。信任绑定的是确切的 hook 定义：插件即使已安装并启用，状态为 `modified` 的 hooks 仍会被跳过。重启 App 或从手机新建 Task 都不会自动获得信任。完成审查后，再新建一个 Task。
+若更新改变了 hook 定义，请在 Codex CLI 输入 `/hooks`，重新审查并信任插件已变更的 hooks。信任绑定的是确切的 hook 定义：插件即使已安装并启用，状态为 `modified` 的 hooks 仍会被跳过。重启 App 或从手机新建 Task 都不会自动获得信任。完成审查后，再新建一个 Task。
 
 ### 2. 照常工作
 

@@ -99,4 +99,6 @@ Selected-Task history is bounded to receipts this installation recorded.
 recent receipts cannot prove complete lifetime coverage.
 
 The zipapp is built deterministically from the included source and localization
-assets. Updating source requires rebuilding the archive and pinned hook commands.
+assets. Updating source requires rebuilding and signing the publisher archive. The fixed
+hook definitions remain unchanged for compatible runtime releases; see
+[signed updates](SIGNED_UPDATES.md). Legacy digest-pinned Tasks retain their old archive.

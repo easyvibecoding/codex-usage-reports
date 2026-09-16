@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
+import base64
 import io
 import json
 import os
@@ -50,11 +50,17 @@ def artifacts(plugin: Path = PLUGIN) -> dict[Path, bytes]:
     runtime = archive.getvalue()
     if len(runtime) > 1024 * 1024:
         raise ValueError("hook runtime exceeds the bootstrap's 1 MiB limit")
-    digest = hashlib.sha256(runtime).hexdigest()
-    bootstrap = (plugin / "scripts/bootstrap.py").read_text()
+    # Publisher mode keeps this definition stable across runtime releases.
+    source = (plugin / "scripts/publisher_bootstrap.py").read_bytes()
+    policy = json.loads((plugin / "runtime/publisher.json").read_text())
+    canonical_policy = json.dumps(policy, sort_keys=True, separators=(",", ":"))
+    entry = ("import base64,json\ns=base64.b64decode(" + repr(base64.b64encode(source).decode())
+             + ")\np=json.loads(" + repr(canonical_policy) + ")\n"
+             "exec(compile(s,'<publisher-bootstrap>','exec'),"
+             "{'__name__':'__main__','SOURCE':s,'POLICY':p})\n")
     hooks = {}
     for event in EVENTS:
-        command = "python3 -I -c " + shlex.quote(bootstrap) + " " + event + " " + digest
+        command = "python3 -I -c " + shlex.quote(entry) + " " + event
         group = {
             "hooks": [
                 {
@@ -78,10 +84,31 @@ def artifacts(plugin: Path = PLUGIN) -> dict[Path, bytes]:
         "statusMessage": "Checking plugin updates and hook trust",
     })
     document = {
-        "description": "SHA-256-pinned, report-only hooks; errors never block work.",
+        "description": "Publisher-signed, report-only hooks; errors never block work.",
         "hooks": hooks,
     }
+    # Full signed payload serves hooks and manual CLI commands. Legacy hook.pyz
+    # remains available for old, digest-pinned Tasks and retained installations.
+    full = {"__main__.py": (
+        "import sys\nif len(sys.argv) > 1 and sys.argv[1] == '--cli':\n"
+        "    del sys.argv[1]\n    from " + package.name + ".cli import main\n"
+        "else:\n    from " + package.name + ".hook_adapter import main\n"
+        "raise SystemExit(main())\n").encode()}
+    for path in sorted(package.rglob("*")):
+        if (path.is_file()
+                and path.suffix in {".py", ".json", ".html", ".sql", ".css", ".js", ".svg"}):
+            full[package.name + "/" + path.relative_to(package).as_posix()] = path.read_bytes()
+    published = io.BytesIO()
+    with zipfile.ZipFile(published, "w", compression=zipfile.ZIP_STORED) as output:
+        for name, blob in sorted(full.items()):
+            info = zipfile.ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))
+            info.create_system = 3
+            info.external_attr = 0o100600 << 16
+            output.writestr(info, blob)
+    if len(published.getvalue()) > 8 * 1024 * 1024:
+        raise ValueError("signed runtime exceeds the 8 MiB limit")
     return {
+        plugin / "runtime/publisher.pyz": published.getvalue(),
         plugin / "runtime/hook.pyz": runtime,
         plugin / "hooks/hooks.json": (json.dumps(document, indent=2) + "\n").encode(),
     }

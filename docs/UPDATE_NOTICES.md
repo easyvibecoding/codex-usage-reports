@@ -1,5 +1,12 @@
 # Update and hook-trust notices
 
+From 0.5.0, routine program updates use [signed runtime updates](SIGNED_UPDATES.md).
+The standalone first-prompt hook checks native trust without fetching an obsolete
+package-version notice when publisher mode is installed. Manual `updates check`
+continues to compare installed plugin packages; use `publisher_updates.py status`
+for the actual active program version. The package workflow below applies to
+entry/key/hook/skill changes and legacy installations.
+
 The first eligible `UserPromptSubmit` in each Task checks this plugin's version
 and native hook trust. A changed installation triggers another check on the next
 prompt, including in an existing Task. Notices appear only when a newer stable
@@ -25,7 +32,8 @@ in its command. Its definition contains no release number, installed path, or
 changing runtime digest, so routine main-runtime updates preserve its native
 trust hash. The checker reads metadata and calls `codex app-server --stdio` for
 `hooks/list`; it does not execute plugin files, downloaded code, or other hooks.
-The normal hooks retain their own SHA-256-pinned runtime and trust review.
+Current main hooks embed the fixed publisher verifier and public key. Older
+versions retain their SHA-256-pinned runtime and per-update trust review.
 
 **The reminder itself must be trusted once when it is first installed.** An older
 installation without this handler cannot announce its own upgrade. If a future

@@ -35,3 +35,20 @@ python3 scripts/check_sensitive_data.py --index --fail-on-findings
 ```
 
 CI scans both the index and reachable history, including embedded zipapp members. The scanner is a focused deterministic check; human review is still required for screenshots, names, and context it cannot classify.
+
+## Signed runtime publisher trust
+
+The fixed hook entry embeds this plugin's RSA-3072 public key and verifies exact
+PKCS#1 v1.5 SHA-256 signatures using Python's standard library. Trusting it permits
+future signed program changes, including program behavior changes, from that
+publisher. It does not promise review of every future runtime by Codex. Key or
+entry changes require new native hook trust; the updater never writes trusted
+hashes. Keep the private key outside Git and back it up securely. A compromised
+publisher key can authorize code; `off` stops automatic updates and `rollback`
+selects the previous verified runtime for new Tasks and CLI calls.
+
+A bounded local worker downloads only public signed metadata and runtime bytes
+from this repository's fixed GitHub URL, with TLS verification enabled. No Task,
+project, prompt, credential or usage data is included. Stored Task identities are
+hashed; file permissions are private. Signature/digest failure keeps the current
+verified release. See [signed updates](docs/SIGNED_UPDATES.md) for limits.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Add fixed publisher-trust hooks with signed runtime and CLI updates, enabled by default.
+- Verify RSA-3072/SHA-256 release signatures, runtime digests and bootstrap compatibility; reject replayed releases.
+- Pin each Task to its starting runtime, retain the previous version, and provide status, on/off, update and rollback controls.
+- Preserve native hook trust across routine updates; new entry definitions still need one user review.
+- Keep the independent hook-trust reminder and all existing reporting/governance policies.
+
 ## 0.4.0
 
 - Add first-prompt update and native hook-trust notices with private deduplication,

@@ -19,7 +19,8 @@ def add_parser(commands, *, native_home_option=False):
 
 
 def run(args, root):
-    directory = Path(__file__).resolve().parents[2]
+    directory = Path(os.environ.get("PLUGIN_ROOT") or
+                     Path(__file__).resolve().parents[2])
     # Installed cache directories are named for the version, not the plugin.
     plugin = "codex-usage-reports" if "usage_reports" in __package__ else "codex-run-budget"
     home = args.codex_home or Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
