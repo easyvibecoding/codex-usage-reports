@@ -230,6 +230,7 @@ class AutoPreviewTest(unittest.TestCase):
         card = card_path.read_text()
         self.assertIn('data-metric="task-total">1,200</dd>', card)
         self.assertIn('data-metric="turn-delta">+1,200</dd>', card)
+        self.assertIn('(88.89%)', card)
         self.assertNotIn("等待用量寫入", card)
         with self.transcript.open("a") as output:
             output.write(json.dumps(native_counter(TASK, turn, 1500,

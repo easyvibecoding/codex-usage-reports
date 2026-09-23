@@ -92,6 +92,8 @@ class CliTest(unittest.TestCase):
         report = json.loads(output)
         self.assertEqual(report["task_usage"]["total"], 1400)
         self.assertEqual(report["turns"][0]["usage"]["total"], 400)
+        self.assertEqual(report["parent_cache_read_share_percent"], 88.89)
+        self.assertEqual(report["turns"][0]["parent_cache_read_share_percent"], 88.89)
         self.assertEqual(report["turns"][0]["contexts"][0]["model"], "example-model")
         self.assertFalse(report["history_complete"])
         for private in (TASK, OTHER, str(self.page), "PRIVATE PROMPT",

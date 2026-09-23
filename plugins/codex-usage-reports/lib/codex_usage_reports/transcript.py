@@ -29,6 +29,17 @@ def request_usage(value: Any) -> dict[str, int] | None:
     return values
 
 
+def cache_read_share_percent(usage: dict[str, int] | None) -> float | None:
+    """Observed cached-input share; missing or zero input is not a cache miss."""
+    if not isinstance(usage, dict):
+        return None
+    total, cached = usage.get("input"), usage.get("cached_input")
+    if (type(total) is not int or type(cached) is not int or total <= 0
+            or cached < 0 or cached > total):
+        return None
+    return round(100 * cached / total, 2)
+
+
 @dataclass(frozen=True)
 class Usage:
     total: int = 0

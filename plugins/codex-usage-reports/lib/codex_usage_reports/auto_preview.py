@@ -23,6 +23,7 @@ from .auto_report import _delta, child_coverage, observed_total, settings, snaps
 from .child_usage import collect
 from .report_i18n import ReportText, resolve_locale
 from .task_catalog import TaskCatalog, _uuid
+from .transcript import cache_read_share_percent
 from .util import stable_hash
 
 
@@ -64,6 +65,11 @@ def render_card(receipt: dict) -> str:
     def number(key):
         return text.number(usage[key] if usage is not None else None)
 
+    cache_share = cache_read_share_percent(usage)
+    cached_display = number("cached_input") + (
+        f" ({cache_share:g}%)" if cache_share is not None else ""
+    )
+
     contexts = receipt.get("contexts") or []
     context_pairs = [text(
         "context_pair", model=context.get("model") or text("not_observed"),
@@ -97,7 +103,7 @@ def render_card(receipt: dict) -> str:
             text.number(children['usage']['total'] if children.get("usage") is not None else None)
         ),
         "coverage": child_coverage(children, text.locale),
-        "input": number("input"), "cached": number("cached_input"),
+        "input": number("input"), "cached": cached_display,
         "output": number("output"), "reasoning": number("reasoning_output"),
     }
     values.update({"label_" + key: text(key) for key in (
@@ -200,6 +206,7 @@ def preview(root: Path, session: str, turn: str, *, output_dir: Path, home=None)
     quota = observe(root, key, home=home)
     receipt = {
         "key": key, "task_name": task["display_name"], "usage": usage, "usage_status": status,
+        "parent_cache_read_share_percent": cache_read_share_percent(usage),
         "contexts": current["contexts"], "contexts_limited": current.get("contexts_limited", False),
         "task_usage": current.get("usage"), "elapsed_seconds": seconds,
         "counter_source": current.get("counter_source"),

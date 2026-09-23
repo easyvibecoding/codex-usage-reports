@@ -8,6 +8,7 @@
 | Observed combined subtotal | Parent turn usage plus available child usage; check coverage. |
 | Input | Native input tokens, including cached input. |
 | Cached input | Subset of input, not an extra chargeable token count. |
+| Cache-read share | Cached input divided by observed input for the same displayed scope. Missing or zero input is unavailable, not 0%. |
 | Output | Native output tokens, including reasoning output when represented that way. |
 | Reasoning output | Subset of output; do not add it again to total. |
 | Model / effort | Chronological settings observed in this turn. |

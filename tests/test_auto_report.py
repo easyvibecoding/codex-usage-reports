@@ -138,6 +138,7 @@ class AutoReportTest(unittest.TestCase):
         self.assertEqual(receipt["elapsed_seconds"], 0)
         self.assertEqual(receipt["usage"]["total"], 200)
         self.assertEqual(receipt["usage"]["cached_input"], 160)
+        self.assertEqual(receipt["parent_cache_read_share_percent"], 88.89)
         self.assertEqual(receipt["model_requests_for_report"], 0)
         self.assertEqual(receipt["task_hash"], stable_hash("private-session-id"))
         self.assertIsNone(self.event("Stop", 10))

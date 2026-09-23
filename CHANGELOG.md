@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Show observed cached-input share in automatic receipts, preview cards, and selected Task reports.
+- Add parent-only cache-read share to receipt and Task JSON; missing or zero input remains unavailable.
+- Keep parent, child, and quota scopes separate; the percentage does not diagnose server-side cache misses or estimate savings.
+
 ## 0.5.0
 
 - Add fixed publisher-trust hooks with signed runtime and CLI updates, enabled by default.

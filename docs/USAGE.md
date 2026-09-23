@@ -29,6 +29,12 @@ Do this from the repository root. Do not add a second marketplace with the same 
 
 The preview is immutable. A completed receipt does not rewrite a card already shown in chat. If a turn is still running or interrupted, read its status before interpreting totals.
 
+The cached-input detail now includes its share of the same displayed input.
+Cards and saved human receipts use the observed parent-plus-child subtotal when
+available; JSON `parent_cache_read_share_percent` uses only the parent usage
+record. A missing or zero input denominator remains `null`. The percentage is
+an observation, not a server-side cache-miss reason or a savings estimate.
+
 ## CLI
 
 All examples run from the cloned repository root. No runtime dependency installation is needed.

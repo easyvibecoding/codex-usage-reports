@@ -112,6 +112,7 @@ Set `TASK_ID` to the native ID of the Task you want to inspect. The report stays
 - **Historical settings.** Today's global model preference never replaces a past turn's observation.
 - **Completion checks.** A bounded local worker reconciles later native records; original Stop JSON/HTML/Markdown receipts and inline snapshots are preserved.
 - **Separate scopes.** Cached input is a subset of input; reasoning output is a subset of output. Child usage and account quota remain distinct.
+- **Cache-read share.** Cards and saved reports show cached input as a percentage of observed input. Missing or zero input remains unavailable; this is not an official cache-miss diagnosis.
 - **Local files.** Native identifiers are hashed in report state. Private display names may appear in your local reports.
 - **Lightweight hooks.** Reporting errors do not deny tools or stop the agent.
 - **Localized cards.** English, Traditional Chinese, Simplified Chinese, Japanese, Korean, German, French, Spanish, and Portuguese; four README translations.

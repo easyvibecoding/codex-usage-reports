@@ -18,6 +18,7 @@ from urllib.parse import quote
 from .auto_report import SCAN_BYTES, child_coverage, snapshot
 from .report_i18n import ReportText, resolve_locale
 from .task_catalog import TaskCatalog
+from .transcript import cache_read_share_percent
 from .util import stable_hash
 
 MAX_RECEIPT_BYTES = 256 * 1024
@@ -101,6 +102,7 @@ def _turns(root: Path, task_hash: str, limit: int) -> tuple[list, bool, str]:
                         or receipt.get("turn_hash") != row["turn_hash"]):
                     raise ValueError("receipt identity mismatch")
                 item.update(usage=receipt.get("usage"), task_usage=receipt.get("task_usage"),
+                            parent_cache_read_share_percent=cache_read_share_percent(receipt.get("usage")),
                             counter_source=receipt.get("counter_source"),
                             contexts=receipt.get("stop_contexts", []),
                             contexts_limited=receipt.get("contexts_limited", False),
@@ -147,6 +149,7 @@ def build_task_report(root: Path, selector: str, *, home=None, limit=50) -> dict
         "task": description,
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "task_usage": current.get("usage"),
+        "parent_cache_read_share_percent": cache_read_share_percent(current.get("usage")),
         "counter_source": current.get("counter_source"),
         "usage_status": current["status"],
         "latest_turn_hash": stable_hash(turn) if turn else None,
@@ -170,10 +173,13 @@ def render_task_report(report: dict, format: str = "markdown") -> str:
     text = ReportText(report.get("locale", "en"))
     label = report["task"]["display_name"]
     usage = report.get("task_usage") or {}
+    cache_share = cache_read_share_percent(usage)
     rows = [(text("task_total"), text.number(usage.get("total"))),
             *[(text(key), text.number(usage.get(field))) for key, field in
               (("input", "input"), ("cached", "cached_input"), ("output", "output"),
                ("reasoning", "reasoning_output"))]]
+    if cache_share is not None:
+        rows[2] = (rows[2][0], rows[2][1] + f" ({cache_share:g}%)")
     coverage = [report.get("usage_status", "unavailable"), "history_complete=false"]
     coverage.extend(key + "=true" for key in (
         "counter_reset_observed", "native_tail_limited", "contexts_limited", "turns_limited"

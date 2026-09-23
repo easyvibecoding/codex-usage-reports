@@ -19,7 +19,7 @@ from typing import Any
 
 from .report_i18n import ReportText, resolve_locale
 from .task_catalog import task_description
-from .transcript import _usage_from_line, request_usage
+from .transcript import _usage_from_line, cache_read_share_percent, request_usage
 from .util import stable_hash
 
 SCAN_BYTES = 8 * 1024 * 1024
@@ -696,6 +696,11 @@ def _documents(receipt: dict[str, Any]) -> tuple[str, str]:
     def number(key: str) -> str:
         return text.number(usage[key] if usage is not None else None)
 
+    cache_share = cache_read_share_percent(usage)
+    cached_display = number("cached_input") + (
+        f" ({cache_share:g}%)" if cache_share is not None else ""
+    )
+
     rows = [
         (text("report_revision"), str(receipt.get("revision", 1))),
         (text("reconcile_heading"), text("reconcile_" + receipt.get(
@@ -710,7 +715,7 @@ def _documents(receipt: dict[str, Any]) -> tuple[str, str]:
          text.number(children['usage']['total'] if children.get("usage") else None)),
         (text("coverage"), child_coverage(children, text.locale)),
         (text("input"), number("input")),
-        (text("cached"), number("cached_input")),
+        (text("cached"), cached_display),
         (text("output"), number("output")),
         (text("reasoning"), number("reasoning_output")),
     ]
@@ -981,6 +986,7 @@ def handle(
                 "start_recovered": "recovered_at" in started,
                 "stopped_at": datetime.fromtimestamp(now, timezone.utc).isoformat(),
                 "usage": usage,
+                "parent_cache_read_share_percent": cache_read_share_percent(usage),
                 "task_usage": stopped.get("usage") if source_verified else None,
                 "counter_source": stopped.get("counter_source") if source_verified else None,
                 "usage_status": status,
