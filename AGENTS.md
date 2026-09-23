@@ -17,3 +17,11 @@ This repository contains the independent Codex Usage Reports plugin and CLI.
   and `python3 scripts/check_sensitive_data.py --index --fail-on-findings`.
 - Verify installation in an isolated Codex home; do not silently alter the maintainer's active plugin setup.
 - Keep all four READMEs consistent. Screenshots must come from synthetic application output; brand art can use Codex image generation.
+
+## Paired repository review
+
+When this repository's remote `main` changes, apply
+[the paired repository contract](docs/CROSS_REPO_REVIEW.md) to request a review
+in Codex Run Budget. When reviewing a change from that repository, decide
+whether alignment is needed here; never assume feature parity. Keep this
+review report-only and preserve the recorded source SHA and decision.
