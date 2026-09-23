@@ -109,7 +109,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 ## 配對專案變更審查
 
-若你同時維護 Codex Run Budget，該外掛可在指定專案的 Task 結束時，對觀察到的遠端 `main` 變更於另一個 Codex 專案建立唯讀審查 Task。兩個 Task 會一對一綁定，後續 Stop 摘要送往同一個對端，並抑制訊息回聲。[共同審查契約](../CROSS_REPO_REVIEW.md)要求以證據判斷是否需要對齊，不會預設功能必須相同或自動複製程式碼。Run Budget 設定 Stop hook 與選用的手動遠端掃描；Usage Reports 仍獨立運作，僅提供報告。
+Codex Run Budget 的跨專案審查是**實驗性、選用功能**。使用者自行指定兩個本機 Codex 專案根目錄建立具名配對，並開啟總開關及各組開關；同一專案可以加入多組配對。對本專案這組配對，啟用後的 Stop hook 觀察到新的遠端 `main` 範圍時，可要求在另一個專案建立唯讀審查 Task。兩個 Task 在該組內一對一綁定，後續 Stop 摘要送往同一個對端，並抑制訊息回聲。[此兩個 repo 的審查契約](../CROSS_REPO_REVIEW.md)要求以證據判斷是否需要對齊。配對及選用的手動遠端掃描由 Run Budget 管理；Usage Reports 仍獨立運作，僅提供報告。[設定與開關說明](https://github.com/easyvibecoding/codex-run-budget/blob/main/docs/PAIRED_REVIEW_AUTOMATION.md)。
 
 ## 從 Codex Run Budget 移轉
 

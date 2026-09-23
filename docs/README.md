@@ -32,6 +32,6 @@ Codex Usage Reports is the independent, report-only plugin in this repository. S
 | Handle local data, publisher trust, or security reports | [Security](../SECURITY.md) |
 | Read release history | [Changelog](../CHANGELOG.md) |
 | Manage repository metadata and launch assets | [GitHub assets](GITHUB.md) |
-| Review whether a change in the paired Run Budget project needs alignment | [Paired repository review](CROSS_REPO_REVIEW.md) |
+| Review whether an experimental Run Budget pair needs alignment | [Paired repository review](CROSS_REPO_REVIEW.md) and [configuration](https://github.com/easyvibecoding/codex-run-budget/blob/main/docs/PAIRED_REVIEW_AUTOMATION.md) |
 
 The dated results in [validation](VALIDATION.md) describe the versions tested at the time. They do not establish the state of a current installation.

@@ -5,6 +5,9 @@ The [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget) and
 repositories are separate Codex projects. A change in either can call for a review
 in the other, but it does not imply that the same code or behavior belongs in
 both. This document is mirrored in both repositories; keep its wording aligned.
+These two repositories are one specific user-selected pair in Run Budget's
+experimental cross-project feature. The coordinator acts only when its global
+switch and this pair are enabled; this contract does not turn the feature on.
 
 ## Trigger and ownership
 

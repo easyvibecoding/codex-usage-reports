@@ -70,7 +70,7 @@ The Python runtime uses the standard library. Reporting needs no API key, model 
 
 ## Paired project change review
 
-If you also maintain Codex Run Budget, its project-scoped `Stop` hook can open a read-only review Task in the other Codex project when a remote `main` change is observed. It binds the two Tasks one-to-one and sends later Stop summaries to the same counterpart, with an echo guard. The [shared review contract](docs/CROSS_REPO_REVIEW.md) requires an evidenced alignment decision; it never assumes matching features or copies code. Run Budget configures the hook and optional manual remote scan; Usage Reports remains independent and report-only.
+Codex Run Budget offers an **experimental, optional** cross-project review feature. Its users choose exact local Codex project roots, register named pairs, and enable both a global switch and each desired pair. A project can belong to multiple pairs. For this repository's pair, an enabled project-scoped `Stop` hook can request a read-only review Task when it observes a new remote `main` range. It binds the two Tasks one-to-one within that pair and relays later Stop summaries to the same counterpart, with an echo guard. The [specific review contract](docs/CROSS_REPO_REVIEW.md) requires an evidenced alignment decision. Run Budget owns the pairing and optional manual remote scan; Usage Reports remains independent and report-only. [Configuration guide](https://github.com/easyvibecoding/codex-run-budget/blob/main/docs/PAIRED_REVIEW_AUTOMATION.md).
 
 ## Documentation
 

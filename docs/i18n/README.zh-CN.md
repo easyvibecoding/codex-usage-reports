@@ -109,7 +109,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 ## 配对项目变更审查
 
-如果同时维护 Codex Run Budget，该插件可在指定项目的 Task 结束时，为观察到的远端 `main` 变更在另一个 Codex 项目中建立只读审查 Task。两个 Task 一对一绑定，此后的 Stop 摘要送往同一个对端，并抑制消息回声。[共同审查契约](../CROSS_REPO_REVIEW.md)要求根据证据判断是否需要对齐，不预设功能必须相同，也不会自动复制代码。Run Budget 配置 Stop hook 和可选的手动远端扫描；Usage Reports 仍独立运行，只提供报告。
+Codex Run Budget 的跨项目审查是**实验性、可选功能**。用户自行指定两个本地 Codex 项目根目录建立具名配对，并开启总开关和各组开关；同一项目可加入多组配对。对于本项目这一组，启用后的 Stop hook 观察到新的远端 `main` 范围时，可要求在另一项目建立只读审查 Task。两个 Task 在该组内一对一绑定，此后的 Stop 摘要发往同一个对端，并抑制消息回声。[这两个仓库的审查契约](../CROSS_REPO_REVIEW.md)要求根据证据判断是否需要对齐。配对和可选的手动远端扫描由 Run Budget 管理；Usage Reports 仍独立运行，只提供报告。[配置与开关说明](https://github.com/easyvibecoding/codex-run-budget/blob/main/docs/PAIRED_REVIEW_AUTOMATION.md)。
 
 ## 从 Codex Run Budget 迁移
 
