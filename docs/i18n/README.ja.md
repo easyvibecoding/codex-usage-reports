@@ -109,7 +109,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 ## 対になるプロジェクトの変更レビュー
 
-Codex Run Budget も保守している場合、どちらかのリポジトリのリモート `main` が更新されると、もう一方の Codex プロジェクトに読み取り専用のレビュー Task をキューできます。[共通のレビュールール](../CROSS_REPO_REVIEW.md)に従い、証拠に基づいて変更をそろえる必要があるか判断します。機能の一致を前提にせず、コードも自動コピーしません。ローカルスキャナーと Codex App のディスパッチャーは Run Budget 側で設定します。Usage Reports は独立したレポート専用プラグインです。
+Codex Run Budget も保守している場合、指定したプロジェクトの Task が終了すると、そのプラグインは検出したリモート `main` の変更について、もう一方の Codex プロジェクトに読み取り専用のレビュー Task を作成できます。2 つの Task は一対一で紐付けられ、以後の Stop 要約は同じ相手に送られます。受信による応答の反響は抑制されます。[共通のレビュールール](../CROSS_REPO_REVIEW.md)に従い、証拠に基づいて変更をそろえる必要があるか判断します。機能の一致を前提にせず、コードも自動コピーしません。Stop hook と任意の手動リモート走査は Run Budget 側で設定します。Usage Reports は独立したレポート専用プラグインです。
 
 ## Codex Run Budget からの移行
 
