@@ -65,9 +65,8 @@ produces `requires_plugin_update` and a new-Task reminder to update and review.
 Activation is transactional. Download/signature failure keeps the verified
 current release. A corrupt active cache can fall back to the verified previous
 release for a new Task. A pinned Task does not silently change versions on
-failure. Existing product failure policy is preserved: reporting errors are
-nonblocking; Run Budget unavailable-runtime admission checks remain fail-closed.
-Network checks never run inside `Governor.handle` and make no policy decisions.
+failure. Reporting errors remain nonblocking. The update worker makes no budget
+or tool-admission decisions.
 
 Local state is private `publisher-updates.sqlite3` plus content-addressed files
 under `runtimes/` in the plugin's existing data directory. Native Task IDs are

@@ -12,47 +12,7 @@
 
 [English](../../README.md) · [繁體中文](README.zh-TW.md) · **简体中文** · [日本語](README.ja.md)
 
-[快速开始](#快速开始) · [报告示例](#查看报告) · [使用指南](../../docs/USAGE.md) · [数字如何计算](../../docs/METRICS.md) · [故障排查](../../docs/TROUBLESHOOTING.md)
-
-## 自动更新与一次授权
-
-首次安装此版本后，在 CLI 输入 `codex` → `/hooks`，检查并信任固定入口。此后常规运行程序与 CLI 更新沿用相同的 hook 定义，无需重新授权；这表示同意执行同一发布者未来签署的程序。默认在提交提示时启动后台检查，每六小时最多一次，只有签名和文件哈希都通过的版本才会启用。新任务使用新版并显示已验证版本，进行中的任务保留原版。
-
-新增 hook、更改入口或密钥，以及插件／skill 结构更新，仍须更新插件并检查变更的 hooks。工具不会修改 Codex 的信任记录。在已安装插件目录执行 `python3 scripts/publisher_updates.py status` 可读取实际版本；将 `status` 换成 `off`、`on`、`update` 或 `rollback` 可禁用、启用、手动更新或回退。Plugins 页面可能仍显示原安装版本。[更新机制与操作](../SIGNED_UPDATES.md) · [授权提醒](../UPDATE_NOTICES.md)。
-
-## 项目 exec 活动
-
-按工作目录查询额外启动的 `codex exec`、在前台监看变化，或使用可选启动器保留 ephemeral 执行的开始、退出及用量记录。更新并重新信任 hooks、开启新任务后，会在工具返回时提示新活动。启动器归属与原生子代理关系分开，exec 用量不会自动计入主任务。[命令与覆盖范围](../EXEC_ACTIVITY.md)。
-
-## 了解每一轮用了多少
-
-一个长时间运行的 Task 可能包含多轮对话、模型切换和子代理。单个会话的总量无法说明最近一轮的变化。Codex Usage Reports 分别呈现这些范围：
-
-| 想了解什么？ | 报告会显示什么？ |
-| --- | --- |
-| 这个 Task 累计用了多少？ | 所选父 Task 实际观测到的累计 Token 用量。 |
-| 这一轮增加了多少？ | 原生本轮计数，或相同来源的有效累计计数差值。 |
-| 使用了哪个模型和推理强度？ | 该轮观测到的设置，包括可见的设置变化。 |
-| 子代理用了多少？ | 独立的子代理用量小计，以及数据覆盖状态。 |
-| 账号还剩多少配额？ | 有可用数据时，显示原生配额观测值，并与 Task Token 用量分开呈现。 |
-| 之后还能查看吗？ | 保存在本地的 HTML、Markdown 和 JSON 报告记录。 |
-
-运行时仅使用 Python 标准库，无需调用 LLM 计算用量、无需 API 密钥，也不会将报告发送到托管分析服务。本项目从 [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget) 提取报告功能，独立运行。
-
-## 查看报告
-
-![每轮自动报告，显示 Task 累计 Token 和本轮增量](../../docs/examples/turn-en.png)
-
-*此示例使用合成数据，由实际报告模板生成，并置于独立的文档展示框中。桌面版会使用自己的外围主题。*
-
-<details>
-<summary>繁体中文示例</summary>
-
-![繁体中文每轮报告示例](../../docs/examples/turn-zh-Hant.png)
-
-</details>
-
-[打开示例集](../../docs/examples/README.md)，下载 HTML、查看完成后的报告记录和指定 Task 报告。品牌插画使用 Codex 图像生成制作；用量截图则由合成测试数据实际渲染。[美术提示词](../../docs/assets/PROMPTS.md)。
+[快速开始](#快速开始) · [报告示例](#查看报告) · [功能与边界](#了解每一轮用了多少) · [文档索引](../README.md)
 
 ## 快速开始
 
@@ -94,6 +54,36 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 将 `TASK_ID` 设为要查看的 Task 原生 ID。报告范围仅限于该 Task。HTML 导出、配置和卸载方法，请参阅[完整使用指南](../../docs/USAGE.md)。
 
+## 了解每一轮用了多少
+
+一个长时间运行的 Task 可能包含多轮对话、模型切换和子代理。单个会话的总量无法说明最近一轮的变化。Codex Usage Reports 分别呈现这些范围：
+
+| 想了解什么？ | 报告会显示什么？ |
+| --- | --- |
+| 这个 Task 累计用了多少？ | 所选父 Task 实际观测到的累计 Token 用量。 |
+| 这一轮增加了多少？ | 原生本轮计数，或相同来源的有效累计计数差值。 |
+| 使用了哪个模型和推理强度？ | 该轮观测到的设置，包括可见的设置变化。 |
+| 子代理用了多少？ | 独立的子代理用量小计，以及数据覆盖状态。 |
+| 账号还剩多少配额？ | 有可用数据时，显示原生配额观测值，并与 Task Token 用量分开呈现。 |
+| 之后还能查看吗？ | 保存在本地的 HTML、Markdown 和 JSON 报告记录。 |
+
+运行时仅使用 Python 标准库，无需调用 LLM 计算用量、无需 API 密钥，也不会将报告发送到托管分析服务。本项目从 [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget) 提取报告功能，独立运行。
+
+## 查看报告
+
+![每轮自动报告，显示 Task 累计 Token 和本轮增量](../../docs/examples/turn-en.png)
+
+*此示例使用合成数据，由实际报告模板生成，并置于独立的文档展示框中。桌面版会使用自己的外围主题。*
+
+<details>
+<summary>繁体中文示例</summary>
+
+![繁体中文每轮报告示例](../../docs/examples/turn-zh-Hant.png)
+
+</details>
+
+[打开示例集](../../docs/examples/README.md)，下载 HTML、查看完成后的报告记录和指定 Task 报告。品牌插画使用 Codex 图像生成制作；用量截图则由合成测试数据实际渲染。[美术提示词](../../docs/assets/PROMPTS.md)。
+
 ## 可以核查的报告
 
 - **如实呈现缺失数据。** 计数器重置、截断记录和设置冲突，都会保留为部分可用或未知。
@@ -105,6 +95,18 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 - **轻量 hooks。** 报告出错不会拒绝工具调用或停止代理。
 - **多语言卡片。** 支持英语、繁体中文、简体中文、日语、韩语、德语、法语、西班牙语和葡萄牙语；README 提供四种语言版本。
 
+## 项目 exec 活动
+
+按工作目录查询额外启动的 `codex exec`、在前台监看变化，或使用可选启动器保留 ephemeral 执行的开始、退出及用量记录。信任相关 hooks 并开启新任务后，会在工具返回时提示新活动。启动器归属与原生子代理关系分开，exec 用量不会自动计入主任务。[命令与覆盖范围](../EXEC_ACTIVITY.md)。
+
+## 自动更新与一次授权
+
+首次安装此版本后，在 CLI 输入 `codex` → `/hooks`，检查并信任固定入口。此后常规运行程序与 CLI 更新沿用相同的 hook 定义，无需重新授权；这表示同意执行同一发布者未来签署的程序。默认在提交提示时启动后台检查，每六小时最多一次，只有签名和文件哈希都通过的版本才会启用。新任务使用新版并显示已验证版本，进行中的任务保留原版。
+
+新增 hook、更改入口或密钥，以及插件／skill 结构更新，仍须更新插件并检查变更的 hooks。工具不会修改 Codex 的信任记录。在已安装插件目录执行 `python3 scripts/publisher_updates.py status` 可读取实际版本；将 `status` 换成 `off`、`on`、`update` 或 `rollback` 可禁用、启用、手动更新或回退。Plugins 页面可能仍显示原安装版本。[更新机制与操作](../SIGNED_UPDATES.md) · [授权提醒](../UPDATE_NOTICES.md)。
+
+手动检查已安装插件版本和原生 hook 信任状态时，使用 `python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"`。其结果与当前启用的签名运行程序版本属于不同范围。
+
 ## 从 Codex Run Budget 迁移
 
 两个插件各自独立。如果保留原插件的预算控制功能，请先禁用原插件的自动报告，再启用本插件，以免出现重复卡片。不需要迁移历史数据库。[迁移说明](../../docs/MIGRATION.md)。
@@ -114,6 +116,10 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 这些报告记录实际观测到的用量，**不等同于账单或精确费用**。配额属于账号，无法仅凭 Token 总量分摊到单个 Task。子代理用量的归属取决于可获取的原生父子关系数据。Hook 的送达情况和原生数据结构都可能随 Codex 版本变化。本插件不设置预算限制，也不会中断工作。
 
 报告可能透露项目名称和使用模式。请将真实报告保存在本地；公开 issue 仅使用合成测试数据。[隐私与安全](../../SECURITY.md)。
+
+## 文档索引
+
+[文档索引](../README.md)按使用场景整理 CLI、用量数字、exec 活动、签名更新、故障排查和维护资料。[使用指南](../USAGE.md)列出完整命令；[数字如何计算](../METRICS.md)解释观测值与不完整状态；[故障排查](../TROUBLESHOOTING.md)处理卡片和 hooks 问题。
 
 ## 参与贡献
 
