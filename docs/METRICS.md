@@ -14,6 +14,7 @@
 | Model / effort | Chronological settings observed in this turn. |
 | Elapsed | Wall-clock turn time, including waiting; not model compute time. |
 | Account quota | A native account observation at capture time, not Task consumption. |
+| Recorded turn rows | Receipts written by this plugin; they are not a reconstruction of every historical native turn. |
 
 ## Read the status as well as the number
 

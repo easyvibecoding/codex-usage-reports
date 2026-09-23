@@ -6,13 +6,22 @@ The reporter reads the selected Task's native catalog metadata and bounded usage
 
 The report store contains hashed identity keys, timing baselines, counters, states, and reports. Private local reports may display native Task names and agent nicknames. Prompts, tool arguments, tool output, and transcript text must not be copied into reports or public artifacts. Display names are escaped and treated as data.
 
+Project exec activity reads bounded native catalog metadata. Its optional
+launcher saves hashed identities, lifecycle and usage observations, not prompt
+or stream contents. The launcher executes the `codex exec` command supplied by
+the user, so that invocation has Codex's ordinary authentication and network
+behavior. [Activity scope](docs/EXEC_ACTIVITY.md).
+
 This does not anonymize every report: project names, times, models, and usage patterns can be sensitive. Keep generated reports outside Git. The repository includes only synthetic examples.
 
-The separate first-prompt update checker fetches only this plugin's public
-GitHub manifest, with a six-hour cache. No Task ID, project path, prompt, or usage
-is sent. Its embedded command does not execute newly installed plugin code and
-never changes native hook trust. Set `CODEX_PLUGIN_UPDATE_NOTICES=0` to disable
-automatic checks. See [update notices](docs/UPDATE_NOTICES.md) for scope and limits.
+In publisher mode, the separate first-prompt reminder reads native hook trust;
+manual `updates check` can fetch this plugin's public package manifest with a
+six-hour cache. The signed runtime worker separately downloads public signed
+metadata and archive bytes. Neither request sends a Task ID, project path,
+prompt, or usage data. The reminder does not execute newly installed plugin
+code or change native trust. Set `CODEX_PLUGIN_UPDATE_NOTICES=0` to disable
+automatic reminders; signed update controls are separate. See
+[update notices](docs/UPDATE_NOTICES.md) and [signed updates](docs/SIGNED_UPDATES.md).
 
 ## Boundaries
 

@@ -4,7 +4,7 @@
 
 # Codex Usage Reports
 
-**Automatic token usage reports for every Codex Task and turn.** See Task totals, turn deltas, observed models, reasoning effort, and subagent usage in a compact local report.
+**Local usage reports for each Codex Task and turn.** See observed token totals, turn deltas, model and reasoning settings, child-agent coverage, and account quota without treating them as one number.
 
 [![CI](https://github.com/easyvibecoding/codex-usage-reports/actions/workflows/ci.yml/badge.svg)](https://github.com/easyvibecoding/codex-usage-reports/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-mintcream)](LICENSE)
@@ -12,123 +12,68 @@
 
 **English** · [繁體中文](docs/i18n/README.zh-TW.md) · [简体中文](docs/i18n/README.zh-CN.md) · [日本語](docs/i18n/README.ja.md)
 
-[Quick start](#quick-start) · [Examples](#see-the-report) · [User guide](docs/USAGE.md) · [How the numbers work](docs/METRICS.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
-
-## Project exec activity
-
-Inspect extra `codex exec` sessions by working directory, watch for changes in the foreground, or use the optional launcher to retain start/exit and usage receipts for ephemeral runs. Hooks notify at tool-return boundaries after an updated hook review and a new Task. Launcher attribution stays distinct from native child lineage; exec usage is separate from parent totals. [Commands and coverage](docs/EXEC_ACTIVITY.md).
-
-## Automatic signed runtime updates
-
-Trust the fixed publisher entry once in CLI `codex` → `/hooks`. Routine runtime
-and CLI updates then retain the same native hook definitions and need no new
-trust review. By default, a prompt can start a bounded background check at most
-once every six hours. Only releases signed by this plugin's pinned publisher key
-are activated. New Tasks use the update; existing Tasks retain their version.
-The first hook in a new Task reports its verified runtime version.
-
-This authorizes future signed program changes from the same publisher. New hook
-events, a changed entry/key, or plugin/skill structure still require a normal
-plugin update and review of changed hooks. Nothing edits Codex's trust records.
-Use `python3 scripts/publisher_updates.py status|on|off|update|rollback` from the
-installed plugin directory (choose one action). `status` reports the runtime
-version; the Plugins page may still show the older installed package version.
-[Controls, verification and release process](docs/SIGNED_UPDATES.md).
-[Hook trust reminders](docs/UPDATE_NOTICES.md).
-
-## Know what each turn used
-
-A long Task can include many turns, model switches, and child agents. A single session total does not explain the latest change. Codex Usage Reports keeps those scopes visible:
-
-| Question | What the report shows |
-| --- | --- |
-| How much has this Task used? | The selected parent Task's observed cumulative tokens. |
-| What changed this turn? | The native turn counter, or a valid difference between counters from the same source. |
-| Which model and effort ran? | Settings observed in that turn, including visible changes. |
-| Did subagents contribute? | A separate child subtotal and coverage status. |
-| How much account quota remains? | Native quota observations when available, separate from Task tokens. |
-| Can I inspect it later? | Local HTML, Markdown, and JSON receipts. |
-
-The runtime uses Python's standard library. It does not call an LLM to calculate usage, require an API key, or send reports to a hosted analytics service. This is the standalone reporting extraction of [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget).
-
-## See the report
-
-![Automatic per-turn report showing Task cumulative tokens and current-turn delta](docs/examples/turn-en.png)
-
-*Synthetic example rendered by the real report template in a standalone documentation frame. The desktop supplies its own surrounding theme.*
-
-<details>
-<summary>繁體中文 example</summary>
-
-![繁體中文每輪報告範例](docs/examples/turn-zh-Hant.png)
-
-</details>
-
-[Open the example gallery](docs/examples/README.md) for downloadable HTML, a completed receipt, and the selected-Task report. Brand illustrations were created with Codex image generation; usage screenshots were rendered from synthetic fixtures. [Artwork prompts](docs/assets/PROMPTS.md).
+[Quick start](#quick-start) · [What it reports](#what-it-reports) · [Examples](#examples) · [Documentation](#documentation)
 
 ## Quick start
 
-Requires Python 3.10+ and a local Codex environment with plugin hooks. The inline card needs a desktop surface that supports local visualizations. CLI users can read the saved reports. Native state schemas are version-dependent; see [compatibility and validation](docs/VALIDATION.md).
+Requires Python 3.10+ and a local Codex host with plugin hooks. Inline cards also require a desktop surface that supports local visualizations; saved reports work without one. See [compatibility](docs/VALIDATION.md#compatibility-boundaries).
 
-### 1. Install the plugin
+1. Install the plugin from this repository's marketplace:
 
-```sh
-codex plugin marketplace add easyvibecoding/codex-usage-reports
-codex plugin add codex-usage-reports@codex-usage-reports
-```
+   ```sh
+   codex plugin marketplace add easyvibecoding/codex-usage-reports
+   codex plugin add codex-usage-reports@codex-usage-reports
+   ```
 
-Review and trust the plugin hooks in Codex, then **start a new Task**. Installed hooks are loaded according to the host's trust and lifecycle rules. See the official [plugin guide](https://learn.chatgpt.com/docs/plugins) and [hook guide](https://learn.chatgpt.com/docs/hooks).
+2. In the Codex CLI, open `/hooks`, review and trust the installed definitions, then start a **new Task**. An enabled plugin with untrusted or modified hooks does not run those hooks. See the [plugin](https://learn.chatgpt.com/docs/plugins) and [hook](https://learn.chatgpt.com/docs/hooks) guides.
+3. Work normally. The plugin is enabled by default. It can show one pre-final card and save separate local Stop receipts. Ask the bundled `usage-report` skill: “Show the usage report for this Task.”
 
-After an update that changes hook definitions, open `/hooks` in the Codex CLI and review changed plugin hooks again. Trust is bound to the exact hook definition: an installed and enabled plugin can still have `modified` hooks that Codex skips. Restarting the app or opening a Task from a phone does not grant trust. After completing the review, start a new Task.
-
-### 2. Work normally
-
-Ask Codex to do your usual work. The hook records a turn baseline, asks for one pre-final card, and saves a receipt when a supported terminal event arrives. Reporting is enabled by default.
-
-After `Stop`, one local Python worker checks for that turn's native `task_complete` record, with at most eight bounded scans and a 25-second retry deadline. It does not call a model or continue the Task. Once the completion boundary is observed, it saves a revised receipt that can include final-answer usage without counting the next turn. Missing or incomplete evidence stays pending or partial; disabling automatic reports also stops further reconciliation.
-
-The inline card remains a snapshot taken **before** the final answer. Original Stop JSON, HTML, and Markdown receipts are preserved; a fresh Task-report query selects the latest published revision. Replacing the card's HTML file does not reliably refresh an existing card: in a phone remote A/B experiment, the original card kept version A after re-entering the Task, while a new reference displayed version B. Automatic replacement of existing inline cards is therefore not enabled. See [reconciliation and preview behavior](docs/ARCHITECTURE.md#completion-reconciliation).
-
-### 3. Inspect a Task
-
-Use the bundled `usage-report` skill, for example:
-
-> Show the usage report for this Task, including turn totals and observed settings.
-
-Or clone the repository for the standalone CLI:
+To inspect a selected Task directly from a checkout:
 
 ```sh
-git clone https://github.com/easyvibecoding/codex-usage-reports.git
-cd codex-usage-reports
 python3 plugins/codex-usage-reports/scripts/usage_reports.py auto-report status
 python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --format markdown
 ```
 
-Set `TASK_ID` to the native ID of the Task you want to inspect. The report stays scoped to that Task. See [the full usage guide](docs/USAGE.md) for exporting HTML, configuration, and uninstalling.
+Set `TASK_ID` to the exact native Task ID. The [usage guide](docs/USAGE.md) covers HTML/JSON export, settings, and installed versus checkout commands.
 
-## Reporting you can inspect
+## What it reports
 
-- **Honest missing data.** Counter resets, truncated records, and conflicting settings stay partial or unknown.
-- **Historical settings.** Today's global model preference never replaces a past turn's observation.
-- **Completion checks.** A bounded local worker reconciles later native records; original Stop JSON/HTML/Markdown receipts and inline snapshots are preserved.
-- **Separate scopes.** Cached input is a subset of input; reasoning output is a subset of output. Child usage and account quota remain distinct.
-- **Cache-read share.** Cards and saved reports show cached input as a percentage of observed input. Missing or zero input remains unavailable; this is not an official cache-miss diagnosis.
-- **Local files.** Native identifiers are hashed in report state. Private display names may appear in your local reports.
-- **Lightweight hooks.** Reporting errors do not deny tools or stop the agent.
-- **Localized cards.** English, Traditional Chinese, Simplified Chinese, Japanese, Korean, German, French, Spanish, and Portuguese; four README translations.
+| Scope | Observation |
+| --- | --- |
+| Selected parent Task | Latest observed cumulative token counter and this plugin's recorded turn receipts. |
+| Current turn | Native turn counter, or a valid difference between counters from the same source. |
+| Child agents | Separate attributable subtotal with coverage status; never silently added to the parent counter. |
+| Model context | Model and reasoning effort observed during each turn, including visible changes. |
+| Cache | Cached input as part of input, plus cache-read share when the input denominator is observed and nonzero. |
+| Account quota | Native account observation when available, separate from Task usage. |
+| Receipts | Private HTML, Markdown, and JSON; a fresh Task query selects the latest published revision. |
 
-## Moving from Codex Run Budget
+A card is a **pre-final snapshot**. After Stop, one bounded local worker can publish a separate completion revision when the exact turn's native `task_complete` record appears. It preserves the original Stop files and never rewrites a card already shown in chat. Missing counters, resets, conflicting settings, and incomplete child coverage remain unknown or partial. See [metrics](docs/METRICS.md) and [completion behavior](docs/ARCHITECTURE.md#completion-reconciliation).
 
-Both plugins are independent. If you keep the original for budget controls, disable its automatic report before enabling this one to avoid duplicate cards. No historical database migration is required. [Migration instructions](docs/MIGRATION.md).
+The Python runtime uses the standard library. Reporting needs no API key, model call, or hosted analytics service. It does not calculate exact charges, enforce a budget, deny a tool, or stop work. This is the independent reporting extraction of [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget).
 
-## Limits
+## Examples
 
-These are observed usage reports, **not invoices or exact charges**. Quota belongs to the account and cannot be allocated to a Task from token totals. Subagent attribution depends on available native lineage. Hook delivery and native schemas can change with Codex versions. The reporting plugin does not impose budgets or interrupt work.
+![Synthetic automatic turn report with Task total and turn delta](docs/examples/turn-en.png)
 
-Reports can reveal project names and usage patterns. Keep real reports local; use only synthetic fixtures in public issues. [Privacy and security](SECURITY.md).
+*Rendered by the real report template from synthetic data. The desktop provides its own surrounding theme.*
 
-## Contribute
+[Open the example gallery](docs/examples/README.md) for localized cards, HTML, a completed receipt, and a selected-Task report. Brand illustrations were generated with Codex image generation; product screenshots use synthetic application output. [Artwork prompts](docs/assets/PROMPTS.md).
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md), and [validation](docs/VALIDATION.md). Small reproducible bug reports and native-schema compatibility fixes are welcome. Please never attach a real transcript or database.
+## Other capabilities
+
+- **Project exec activity:** list extra `codex exec` sessions in one exact working directory, watch in the foreground, or opt into a launcher that records start, exit, and invocation usage even for ephemeral runs. Hook notices appear at tool-return boundaries. Launcher attribution, native child lineage, and parent usage remain separate. [Commands and coverage](docs/EXEC_ACTIVITY.md).
+- **Signed runtime updates:** after an initial `/hooks` review, the fixed publisher entry can activate compatible signed runtime and CLI updates for new Tasks while existing Tasks stay pinned. Check, disable, manually update, or roll back with `scripts/publisher_updates.py`; entry, key, hook, or plugin structure changes still need normal plugin review. [Trust and controls](docs/SIGNED_UPDATES.md).
+- **Update and trust read-back:** `updates check` reports installed package version and native hook trust independently. The standalone reminder can report changed hooks on a prompt; its scope differs from the active signed runtime version. [Notice behavior](docs/UPDATE_NOTICES.md).
+- **Localized reports:** cards and saved human reports support English, Traditional and Simplified Chinese, Japanese, Korean, German, French, Spanish, and Portuguese. The README has four language versions. [Language selection](docs/USAGE.md#language).
+
+## Documentation
+
+The [documentation index](docs/README.md) organizes the user guides, feature references, troubleshooting, security, and maintainer material. Start with [usage and CLI](docs/USAGE.md), [numbers and status](docs/METRICS.md), or [troubleshooting](docs/TROUBLESHOOTING.md).
+
+If you also use Codex Run Budget, [move only automatic reporting](docs/MIGRATION.md) to avoid duplicate cards. The two plugins keep independent data and controls.
+
+Reports can expose project names and usage patterns. Keep real reports local and use synthetic fixtures in public issues. [Privacy and security](SECURITY.md). See [CONTRIBUTING.md](CONTRIBUTING.md) for development and validation.
 
 MIT © EasyVibeCoding contributors. Independent community project; not affiliated with or endorsed by OpenAI. [Provenance](NOTICE.md).

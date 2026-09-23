@@ -2,7 +2,10 @@
 
 The external reporting seams are lifecycle JSON through the hook adapter,
 `build_task_report(...)` for one selected Task, and `preview(...)` for one
-running turn. CLI and hooks adapt their inputs to these interfaces.
+running turn. CLI and hooks adapt their inputs to these interfaces. The optional
+`exec-activity` CLI and prompt-time notices use a separate project-scoped
+observation path; the signed updater and package/trust checker are independent
+of report settlement. See the [documentation index](README.md).
 
 ```mermaid
 flowchart LR
@@ -31,6 +34,12 @@ flowchart LR
 - `report_i18n` / templates: deterministic localization and escaped rendering.
 - `turn_quota` / `meter_source` / `meter_plan` / `quota_view`: native quota observation and presentation.
 - `bootstrap`: SHA-256-pinned, cache-independent runtime loading.
+- `exec_activity` / `exec_activity_cli`: bounded project catalog reads and
+  private launcher lifecycle receipts. Launcher usage never enters parent totals.
+- `update_notice` / `update_cli`: installed package and native hook-trust
+  read-back, with nonblocking prompt-time notices.
+- Publisher bootstrap and signed runtime: verified updates, per-Task pins,
+  rollback, and separate active-runtime status.
 
 Counter snapshots track native request records and legacy token-count events
 separately. A matching, validated native request provides both Task and turn

@@ -1,6 +1,6 @@
-# Usage guide
+# Usage and CLI
 
-[English README](../README.md) · [Metrics](METRICS.md) · [Troubleshooting](TROUBLESHOOTING.md)
+[Quick start](../README.md#quick-start) · [Documentation index](README.md) · [Metrics](METRICS.md) · [Troubleshooting](TROUBLESHOOTING.md)
 
 ## Install
 
@@ -39,6 +39,22 @@ an observation, not a server-side cache-miss reason or a savings estimate.
 
 All examples run from the cloned repository root. No runtime dependency installation is needed.
 
+The bundled script exposes these commands. Global options such as `--data-dir`,
+`--codex-home`, and `--locale` go before the command.
+
+| Command | Purpose | Detailed guide |
+| --- | --- | --- |
+| `auto-report status|on|off|list|threshold` | Read or change automatic report settings and list recent receipts. | Below |
+| `task TASK_ID` | Render one selected parent Task as Markdown, JSON, or HTML. | Below |
+| `preview TASK_ID TURN_ID` | Render an active turn's pre-final card into an allowed output directory. | Below |
+| `exec-activity list|watch|run` | Observe one project's extra exec sessions or opt into a launcher. | [Exec activity](EXEC_ACTIVITY.md) |
+| `updates check` | Read installed package version and native hook trust. | [Update notices](UPDATE_NOTICES.md) |
+
+Signed runtime controls are a separate installed-plugin script,
+`scripts/publisher_updates.py status|on|off|update|rollback`. The package
+version from `updates check` can differ from the active signed runtime version.
+[Signed update controls](SIGNED_UPDATES.md).
+
 ```sh
 python3 plugins/codex-usage-reports/scripts/usage_reports.py --help
 python3 plugins/codex-usage-reports/scripts/usage_reports.py auto-report status
@@ -49,6 +65,8 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py auto-report thresho
 ```
 
 The threshold is elapsed seconds; zero includes short turns. Switching reports off preserves existing receipts.
+`auto-report list` lists this plugin's recent local receipts, not all native Task
+history.
 
 ### Selected Task
 
@@ -61,6 +79,8 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 ```
 
 Use the Task's ID from Codex rather than its display name. Display names are not unique. The skill can resolve the current Task from its native context.
+The default turn-row limit is 50 and the accepted range is 1–100. `--output`
+creates a private file and refuses to overwrite an existing path.
 
 ### Data directories
 
@@ -102,7 +122,27 @@ Set `CODEX_USAGE_REPORTS_LOCALE` for an explicit report language, or use the glo
 
 ## Update or uninstall
 
-Refresh this marketplace, reinstall the plugin, and start a new Task. Existing Tasks may continue using their pinned runtime.
+Compatible signed runtime updates normally need no package reinstall. To read
+the active version, run this from the installed plugin directory:
+
+```sh
+python3 scripts/publisher_updates.py status
+```
+
+The same script accepts `on`, `off`, `update`, or `rollback` in place of
+`status`. Existing Tasks retain their pinned runtime. See
+[signed updates](SIGNED_UPDATES.md).
+
+To inspect the installed **package** version and native hook trust for a
+project, run from the installed plugin directory:
+
+```sh
+python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"
+```
+
+For a plugin, entry, key, hook, or skill structure change, refresh the
+marketplace, reinstall the plugin, review changed definitions in CLI `/hooks`,
+and start a new Task:
 
 ```sh
 codex plugin marketplace upgrade codex-usage-reports
