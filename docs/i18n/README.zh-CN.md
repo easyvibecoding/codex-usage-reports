@@ -107,6 +107,10 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 手动检查已安装插件版本和原生 hook 信任状态时，使用 `python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"`。其结果与当前启用的签名运行程序版本属于不同范围。
 
+## 配对项目变更审查
+
+如果同时维护 Codex Run Budget，任一仓库的远端 `main` 更新都可以在另一个 Codex 项目中排入只读审查 Task。[共同审查契约](../CROSS_REPO_REVIEW.md)要求根据证据判断是否需要对齐，不预设功能必须相同，也不会自动复制代码。本地扫描器和 Codex App 派发器由 Run Budget 配置；Usage Reports 仍独立运行，只提供报告。
+
 ## 从 Codex Run Budget 迁移
 
 两个插件各自独立。如果保留原插件的预算控制功能，请先禁用原插件的自动报告，再启用本插件，以免出现重复卡片。不需要迁移历史数据库。[迁移说明](../../docs/MIGRATION.md)。

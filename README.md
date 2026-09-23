@@ -68,6 +68,10 @@ The Python runtime uses the standard library. Reporting needs no API key, model 
 - **Update and trust read-back:** `updates check` reports installed package version and native hook trust independently. The standalone reminder can report changed hooks on a prompt; its scope differs from the active signed runtime version. [Notice behavior](docs/UPDATE_NOTICES.md).
 - **Localized reports:** cards and saved human reports support English, Traditional and Simplified Chinese, Japanese, Korean, German, French, Spanish, and Portuguese. The README has four language versions. [Language selection](docs/USAGE.md#language).
 
+## Paired project change review
+
+If you also maintain Codex Run Budget, a remote `main` change in either repository can queue a read-only review Task in the other Codex project. The [shared review contract](docs/CROSS_REPO_REVIEW.md) requires an evidenced alignment decision; it never assumes matching features or copies code. The local scanner and Codex App dispatcher are configured by Run Budget. Usage Reports remains independent and report-only.
+
 ## Documentation
 
 The [documentation index](docs/README.md) organizes the user guides, feature references, troubleshooting, security, and maintainer material. Start with [usage and CLI](docs/USAGE.md), [numbers and status](docs/METRICS.md), or [troubleshooting](docs/TROUBLESHOOTING.md).

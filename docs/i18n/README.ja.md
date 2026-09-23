@@ -107,6 +107,10 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 インストール済みプラグインのバージョンとネイティブ hook の信頼状態を手動で確認するには、`python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"` を実行します。この結果は現在有効な署名付きランタイムのバージョンとは別の範囲です。
 
+## 対になるプロジェクトの変更レビュー
+
+Codex Run Budget も保守している場合、どちらかのリポジトリのリモート `main` が更新されると、もう一方の Codex プロジェクトに読み取り専用のレビュー Task をキューできます。[共通のレビュールール](../CROSS_REPO_REVIEW.md)に従い、証拠に基づいて変更をそろえる必要があるか判断します。機能の一致を前提にせず、コードも自動コピーしません。ローカルスキャナーと Codex App のディスパッチャーは Run Budget 側で設定します。Usage Reports は独立したレポート専用プラグインです。
+
 ## Codex Run Budget からの移行
 
 2 つのプラグインはそれぞれ独立しています。予算制御のために元のプラグインを残す場合は、カードの重複を避けるため、元の自動レポートを無効にしてから本プラグインを有効にしてください。過去のデータベースを移行する必要はありません。[移行手順](../../docs/MIGRATION.md)。

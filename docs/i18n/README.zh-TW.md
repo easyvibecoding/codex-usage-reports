@@ -107,6 +107,10 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 手動檢查已安裝外掛版本與原生 hook 信任狀態時，使用 `python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"`。此結果與目前啟用的簽署執行程式版本是不同範圍。
 
+## 配對專案變更審查
+
+若你同時維護 Codex Run Budget，任一儲存庫的遠端 `main` 更新都可在另一個 Codex 專案排入唯讀審查 Task。[共同審查契約](../CROSS_REPO_REVIEW.md)要求以證據判斷是否需要對齊，不會預設功能必須相同或自動複製程式碼。本機掃描器與 Codex App 派送器由 Run Budget 設定；Usage Reports 仍獨立運作，僅提供報告。
+
 ## 從 Codex Run Budget 移轉
 
 兩個外掛各自獨立。如果保留原外掛的預算控制功能，請先停用原外掛的自動報告，再啟用本外掛，以免出現重複卡片。不需要遷移歷史資料庫。[移轉說明](../../docs/MIGRATION.md)。
