@@ -10,20 +10,17 @@ python3 -m unittest discover -s tests -v
 ruff check plugins tests scripts
 python3 scripts/validate_repo.py
 python3 scripts/check_docs.py
-python3 scripts/check_sensitive_data.py --index --fail-on-findings
 ```
 
 Development tools such as Ruff and browser automation are optional tooling, not runtime dependencies. See [validation](docs/VALIDATION.md) for the release checks.
 
 After changing source or assets packaged in the hook, rebuild the deterministic zipapp and include the updated hooks. Tests should exercise the public reporting seam and meaningful missing-data cases.
-Verify plugin installation and hook loading in an isolated Codex home; do not
-change the maintainer's active installation for a development check.
 
 Before commit, stage only the intended files and run the sensitive-data gate. Enable the included pre-commit hook with `git config core.hooksPath .githooks`.
 
 ## Documentation and translations
 
-The English README is the source document. Keep Traditional Chinese, Simplified Chinese, and Japanese in sync when commands or behavior change. Keep the [documentation index](docs/README.md) aligned with feature guides. Machine-readable names and status values remain untranslated. Run `python3 scripts/check_docs.py` to catch missing relative links and assets.
+The English README is the source document. Keep Traditional Chinese, Simplified Chinese, and Japanese in sync when commands or behavior change. Machine-readable names and status values remain untranslated. Run `python3 scripts/check_docs.py` to catch missing relative links and assets.
 
 Regenerate screenshots from the synthetic example generator; do not publish a real Task. Include exact build commands in the pull request.
 

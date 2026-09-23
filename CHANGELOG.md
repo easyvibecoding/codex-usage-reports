@@ -12,7 +12,7 @@
 - Verify RSA-3072/SHA-256 release signatures, runtime digests and bootstrap compatibility; reject replayed releases.
 - Pin each Task to its starting runtime, retain the previous version, and provide status, on/off, update and rollback controls.
 - Preserve native hook trust across routine updates; new entry definitions still need one user review.
-- Keep the independent hook-trust reminder and nonblocking reporting behavior.
+- Keep the independent hook-trust reminder and all existing reporting/governance policies.
 
 ## 0.4.0
 
@@ -29,7 +29,7 @@
   launcher with private start/exit receipts, including ephemeral runs.
 - Add nonblocking, deduplicated hook notices at tool-return boundaries.
 - Keep launcher attribution, native child lineage and usage scopes distinct;
-  preserve unknown/partial observations.
+  preserve unknown/partial observations and all existing budget decisions.
 
 
 ## 0.2.1 — 2026-09-13

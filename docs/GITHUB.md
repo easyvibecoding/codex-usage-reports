@@ -23,11 +23,6 @@ GitHub supports repository topics for discovery. Its social preview is configure
 
 Codex Usage Reports adds an automatic local receipt to every supported Codex turn. It separates the current turn from the Task's cumulative tokens, shows observed models and reasoning effort, and keeps subagent usage and account quota in their own scopes. The standalone Python plugin needs no reporting API key or hosted dashboard. Available observations stay explicit; missing data remains unknown.
 
-Users can also inspect project-scoped `codex exec` activity and opt into a
-launcher for ephemeral runs. Compatible publisher-signed runtime updates retain
-native hook trust after the initial review; package or hook changes still follow
-the normal plugin review flow. These are distinct from token-budget controls.
-
 ## Short introduction
 
 Every task. Every turn. Automatic local Codex usage reports with honest token deltas, observed settings, subagent attribution, and readable receipts.

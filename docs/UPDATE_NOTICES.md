@@ -7,12 +7,11 @@ continues to compare installed plugin packages; use `publisher_updates.py status
 for the actual active program version. The package workflow below applies to
 entry/key/hook/skill changes and legacy installations.
 
-The first eligible `UserPromptSubmit` in each Task checks native hook trust.
-In legacy package mode it also checks the public package version. A changed
-installation triggers another check on the next prompt, including in an
-existing Task. A publisher-mode reminder appears for enabled hooks awaiting
-trust; a legacy version notice requires an observed newer stable version. They
-never block a prompt, deny a tool, change budgets, install updates, or grant trust.
+The first eligible `UserPromptSubmit` in each Task checks this plugin's version
+and native hook trust. A changed installation triggers another check on the next
+prompt, including in an existing Task. Notices appear only when a newer stable
+version is observed or this plugin has enabled hooks awaiting trust. They never
+block a prompt, deny a tool, change budgets, install updates, or grant trust.
 
 ## Your update workflow
 
@@ -67,9 +66,8 @@ as requiring trust. Messages contain fixed English and Traditional Chinese text.
 
 ## Cost and privacy
 
-Manual package-version checks and legacy notices fetch only this project's
-public plugin manifest from GitHub's `main` branch, with a six-hour success
-cache and ten-minute failure backoff.
+Version checks fetch only this project's public plugin manifest from GitHub's
+`main` branch, with a six-hour success cache and ten-minute failure backoff.
 This is the published marketplace version, not a GitHub release-tag lookup.
 The HTTP request includes no Task ID, workspace path, prompt, transcript, or
 usage data. TLS verification stays enabled; macOS Python installations missing

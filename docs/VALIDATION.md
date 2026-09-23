@@ -1,22 +1,5 @@
 # Validation and compatibility
 
-This file preserves dated release checks. The current package version is
-declared in [pyproject.toml](../pyproject.toml) and the plugin manifest; see the
-[changelog](../CHANGELOG.md) for changes after a dated check. Historical
-canaries do not prove the status of a current installation. The commands near
-the end reproduce the repository checks on the current checkout.
-
-## 0.6.0 documentation and installation read-back
-
-Checked on 2026-09-24 in this checkout. Ruff, all 223 unit tests, repository
-validation, the 24-file documentation link check, and the staged sensitive-data
-scan passed. A fresh isolated
-`CODEX_HOME` installed this checkout's local marketplace and plugin 0.6.0.
-The installed CLI reported 0.6.0, and its signed-runtime status reported an
-active verified 0.6.0 runtime. No hooks were trusted in that disposable home;
-an offline native trust query returned `unknown`. This check verifies package
-installation and local CLI selection, not hook execution or Desktop rendering.
-
 ## 0.5.0 signed updates and native trust continuity
 
 Validated on macOS, Python 3.12.8 and Codex CLI 0.154.0 on 2026-09-17.
