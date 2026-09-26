@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2 — 2026-09-26
+
+- Scope automatic usage-card instructions to an explicit footer block and check final-answer eligibility before preview execution. Exact, JSON-only, code-only and schema-constrained final answers skip both preview and reference.
+- Require eligible parent and child replies to append only their own unchanged reference on a separate line, without forwarding other agents' references.
+- Emit compact reference JSON while preserving Unicode and escaped path payloads.
+- Preserve report-only behavior, native identity, counters, lifecycle and hook definitions. Existing Tasks keep their pinned runtime.
+
 ## 0.7.1 — 2026-09-26
 
 - Revoke previously cached descendant usage when native parent metadata conflicts. Persist a bounded, hashed child revocation and reject delayed scans atomically so later writes cannot restore that usage.

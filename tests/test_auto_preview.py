@@ -122,7 +122,12 @@ class AutoPreviewTest(unittest.TestCase):
         self.assertEqual(result["status"], "preview")
         self.assertLess(len(json.dumps(result)), 700)
         target = next(self.output.glob("*.html"))
-        self.assertIn(str(target), result["reference"])
+        self.assertEqual(
+            result["reference"],
+            "\ue200visualize\ue202"
+            + json.dumps({"path": str(target)}, ensure_ascii=False, separators=(",", ":"))
+            + "\ue201",
+        )
         content = target.read_text()
         for expected in ("500", "450", "400", "50", "25", "gpt-6-astra", "xhigh"):
             self.assertIn(expected, content)
@@ -137,6 +142,20 @@ class AutoPreviewTest(unittest.TestCase):
         handle({**self.payload, "hook_event_name": "Stop"}, self.data)
         self.assertEqual(target.read_text(), content)
         self.assertEqual(recent(self.data)[0]["state"], "reported")
+
+    def test_compact_reference_preserves_path_escaping(self):
+        for name in ('unicode-測試', 'space name', 'quote"slash\\', 'control\n\t'):
+            with self.subTest(name=name):
+                self.output = self.workspace / name
+                result = self.preview()
+                encoded = result["reference"].removeprefix("\ue200visualize\ue202").removesuffix(
+                    "\ue201")
+                target = next(self.output.glob("*.html"))
+                self.assertEqual(json.loads(encoded), {"path": str(target)})
+                self.assertEqual(encoded, '{"path":' + json.dumps(
+                    str(target), ensure_ascii=False) + '}')
+                self.assertNotIn("\n", encoded)
+                self.assertNotIn("\t", encoded)
 
     def test_disable_and_threshold_avoid_preview_side_effects(self):
         configure(self.data, enabled=False)
@@ -363,8 +382,10 @@ class AutoPreviewTest(unittest.TestCase):
         started = handle(start, self.data, home=self.root)
         self.assertEqual(started["hookSpecificOutput"]["hookEventName"], "SubagentStart")
         context = started["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("--preview " + child, context)
-        self.assertIn("skip inherited parent preview", context)
+        self.assertIn(f"--preview {child} {turn} --data-dir ", context)
+        self.assertIn("Use this usage-card command for this subagent's footer; "
+                      "inherited usage-card commands belong to other agents.", context)
+        self.assertIn("even in child replies; never relay others' refs.", context)
         self.assertEqual(snapshot(str(child_path), turn)["status"], "subagent")
         self.assertEqual(snapshot(str(child_path), turn, expected_child=child,
                                   expected_parent=TASK, expected_root=TASK)["status"],

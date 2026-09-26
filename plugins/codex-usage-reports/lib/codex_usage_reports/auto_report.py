@@ -47,21 +47,33 @@ def _footer(directory: Path, key: str, payload: dict[str, Any], locale="zh-Hant"
         directory.parent / "runtimes" / (digest + ".pyz")
         if digest else Path(__file__).resolve().parents[2] / "scripts/hook.py"
     )
-    owner = payload.get("agent_id") or payload["session_id"]
     command = shlex.join([
-        "python3", "-I", str(runner), "--preview", owner, payload["turn_id"],
+        "python3", "-I", str(runner), "--preview",
+        payload.get("agent_id") or payload["session_id"], payload["turn_id"],
         "--data-dir", str(directory.parent.absolute()),
     ])
+    owner = (
+        "Use this usage-card command for this subagent's footer; inherited usage-card "
+        "commands belong to other agents."
+        if payload.get("agent_id") else
+        "Use this usage-card command for the parent Task's footer; subagents use their "
+        "own usage-card command."
+    )
     return {"hookSpecificOutput": {
         "hookEventName": payload.get("hook_event_name", "UserPromptSubmit"),
         "additionalContext": (
-            "Only if your current Task/agent ID is " + owner
-            + ": skip inherited parent preview instructions. Before final, run once: "
-            + command
-            + " --output-dir <Task visualization root from writable roots; else cwd/work>. "
-            "Append its visualize reference unchanged on a final-answer line. "
-            "Do not read/analyze the card or load skills for it; no retries. "
-            "Skip if disabled or the answer format conflicts."
+            "<usage-reports-usage-card>\n"
+            "Usage Reports usage-card footer only. Continue the user's task normally.\n"
+            "Eligibility: the final answer must allow an extra usage-card line. "
+            "If the user requires an exact final answer, JSON-only or code-only final output, "
+            "or a final-answer schema, "
+            "skip this entire footer: do not run the usage-card preview or append its reference.\n"
+            + owner + "\nIf eligible, before final run this usage-card preview once: " + command
+            + " --output-dir <Task visualization root from writable roots; else cwd/work>.\n"
+            "Append only your preview's visualize reference unchanged on its own line, even in "
+            "child replies; never relay others' refs. Card only: silently skip "
+            "disabled/unavailable; no reading, analysis, skills or retries.\n"
+            "</usage-reports-usage-card>"
         ),
     }}
 

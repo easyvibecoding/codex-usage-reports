@@ -37,6 +37,8 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 Set `TASK_ID` to the exact native Task ID. The [usage guide](docs/USAGE.md) covers HTML/JSON export, settings, and installed versus checkout commands.
 
+Automatic card instructions apply only to the footer. If the final answer must be exact, JSON-only, code-only, or follow a final-answer schema, skip both the preview and its reference. File formats do not determine eligibility. Eligible parent and child replies append only their own unchanged reference on a separate line, never another agent's reference. See [automatic reports](docs/USAGE.md#automatic-reports).
+
 ## What it reports
 
 | Scope | Observation |

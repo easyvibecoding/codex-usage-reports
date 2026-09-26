@@ -6,6 +6,35 @@ declared in [pyproject.toml](../pyproject.toml) and the plugin manifest; see the
 canaries do not prove the status of a current installation. The commands near
 the end reproduce the repository checks on the current checkout.
 
+
+## 0.7.2 footer eligibility and reference alignment — 2026-09-26
+
+Aligned the reporting interface reviewed from Run Budget source range
+`b5bf01e739c4f11842c843333ca8793fb6573976..f3ffb509f8f07109360921d48a640f3203035438`,
+including the preceding footer delimiters. Usage Reports keeps its own branding,
+report-only implementation, native ownership and release trust state.
+
+Ruff, all 249 unit/integration tests, repository validation, the 25-file
+documentation check and signed-release verification passed. The deterministic
+runtime has sequence `1790406877` and SHA-256
+`e1ab602a0137fbc0bebf29ec8ce3606255303156197765a11f8c416ad5be32c0`.
+Tests cover eligibility before the preview command, parent/child command ownership,
+own-reference wording and compact JSON round-trips for Unicode, spaces, quotes,
+backslashes and control characters.
+
+A disposable Codex home installed this checkout as version 0.7.2. Installed
+runtime, release manifest and hook bytes matched the checkout. Six focused tests
+loaded the installed signed zipapp and passed; its actual CLI read back the
+reporting settings. Hook definitions remained byte-identical to 0.7.1. The
+maintainer's active installation and native hook grants were not changed.
+
+These are deterministic code, synthetic lifecycle and isolated installation
+checks. No Usage Reports model-driven conversation or Desktop painting canary
+was run for this change. Run Budget's six-model high-effort matrix is source-only
+evidence; its earlier failures and unknown results are not replaced or imported
+as Usage Reports validation. Existing Tasks may retain an older pinned runtime
+and previously injected instructions.
+
 ## 0.7.1 child identity, cache revocation and labels
 
 Checked on 2026-09-26. Ruff, all 248 tests, repository and plugin validation,

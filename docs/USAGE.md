@@ -23,9 +23,22 @@ Do this from the repository root. Do not add a second marketplace with the same 
 ## Automatic reports
 
 1. A supported turn-start hook captures a local baseline.
-2. Before the final answer, Codex runs the provided preview command once and attaches the returned visualization reference.
+2. If the final answer allows an extra usage-card line, Codex runs the provided preview command once and attaches its own returned visualization reference unchanged on a separate line.
 3. A supported terminal hook settles a separate receipt in the local report directory.
 4. Resume normal work; later turns receive their own baselines.
+
+The injected instructions are enclosed in `<usage-reports-usage-card>` and
+`</usage-reports-usage-card>` and apply only to the card footer. Normal user work
+continues. Eligibility comes before the preview command: an exact final answer,
+JSON-only or code-only final output, or a final-answer schema skips both preview
+execution and its reference. Producing JSON, code or schema files is still
+eligible when the final answer allows the extra line.
+
+Eligible parent and child replies append only their own unchanged reference on
+its own line; they never forward another agent's reference. References use compact
+JSON while preserving the path payload. For the card only, disabled or unavailable
+output is skipped silently, with no reading, analysis, skill loading or retries.
+Existing Tasks can retain an older pinned runtime and its injected wording.
 
 When the host delivers the supported subagent lifecycle hooks, each subagent
 uses its own native Task and turn identity for its baseline, pre-final card, and

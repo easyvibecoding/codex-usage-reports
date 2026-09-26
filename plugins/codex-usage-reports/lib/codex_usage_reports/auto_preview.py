@@ -270,6 +270,7 @@ def preview(root: Path, session: str, turn: str, *, output_dir: Path, home=None)
     with os.fdopen(descriptor, "w") as output:
         output.write(content)
     reference = (
-        "\ue200visualize\ue202" + json.dumps({"path": str(target)}, ensure_ascii=False) + "\ue201"
+        "\ue200visualize\ue202"
+        + json.dumps({"path": str(target)}, ensure_ascii=False, separators=(",", ":")) + "\ue201"
     )
     return {"status": "preview", "reference": reference}

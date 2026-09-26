@@ -288,7 +288,10 @@ class AutoReportTest(unittest.TestCase):
         self.data = self.root / "space >[inject](x)"
         context = self.start()["hookSpecificOutput"]["additionalContext"]
         self.assertIn("'" + str(self.data) + "'", context)
-        self.assertNotIn("\n", context)
+        command = context.split(
+            "If eligible, before final run this usage-card preview once: ", 1
+        )[1]
+        self.assertNotIn("\n", command.split(" --output-dir", 1)[0])
 
     def test_footer_has_bounded_instruction_and_no_report_body_task(self):
         from codex_usage_reports.auto_report import _footer
@@ -298,10 +301,31 @@ class AutoReportTest(unittest.TestCase):
         directory.mkdir()
         specific = _footer(directory, "example", self.payload)["hookSpecificOutput"]
         context = specific["additionalContext"]
-        self.assertLess(len(context.split("--output-dir", 1)[-1]), 300)
+        self.assertTrue(context.startswith(
+            "<usage-reports-usage-card>\n"
+            "Usage Reports usage-card footer only. Continue the user's task normally.\n"
+        ))
+        self.assertTrue(context.endswith("\n</usage-reports-usage-card>"))
+        self.assertIn("Use this usage-card command for the parent Task's footer; "
+                      "subagents use their own usage-card command.", context)
+        eligibility = (
+            "Eligibility: the final answer must allow an extra usage-card line. "
+            "If the user requires an exact final answer, JSON-only or code-only final output, "
+            "or a final-answer schema, "
+            "skip this entire footer: do not run the usage-card preview or append its reference."
+        )
+        self.assertLess(context.index(eligibility), context.index("Use this usage-card command"))
+        self.assertLess(
+            context.index("Use this usage-card command"),
+            context.index("If eligible, before final run this usage-card preview once:")
+        )
+        footer_body = context.split("--output-dir", 1)[-1].rsplit("\n</", 1)[0]
+        self.assertLess(len(footer_body), 300)
         self.assertIn("Task visualization root from writable roots; else cwd/work", context)
-        self.assertIn("Do not read", context)
-        self.assertIn("no retries", context)
+        self.assertIn("Append only your preview's visualize reference unchanged on its own line, "
+                      "even in child replies; never relay others' refs.", context)
+        self.assertIn("Card only: silently skip disabled/unavailable;", context)
+        self.assertIn("no reading, analysis, skills or retries.", context)
         self.assertNotIn(ReportText("zh-Hant")("card_note"), context)
 
     def fresh_page(self, *, prefix=(), extra_meta=None):
