@@ -35,6 +35,8 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 自动卡片指令只适用于回答末尾的卡片。如果最终回答必须完全符合指定文字、只能输出 JSON／代码，或遵循回答 schema，就跳过预览和引用；生成文件的格式不影响此判断。允许附加卡片时，主 Task 和子智能体各自只在独立一行附上自己的原始引用，不转发其他代理的引用。详见[自动报告](../../docs/USAGE.md#automatic-reports)。
 
+子代理沿用父 Task 的预览目录时，程序会自动改存子代理自己的目录。若沙盒拒绝该次写入，同一张快照可改存子代理工作目录下的 `work/codex-usage-cards`。已有卡片保持原样；新版 runtime 由新 Task 加载。
+
 `Stop` 或 `SubagentStop` 之后，一个本地 Python 后台进程会检查该 Task、该轮的原生 `task_complete` 记录，最多进行八次有范围限制的扫描，重试期限为 25 秒。它不会调用模型，也不会继续 Task。确认该轮的完成边界后，会另存修订报告，纳入已写入的最终回答用量，避免计入下一轮。证据缺失或不完整时，仍保留待更新或部分可用状态；禁用自动报告也会停止后续核对。
 
 内嵌卡片仍是最终回答**之前**截取的快照。原始终止事件 JSON、HTML 和 Markdown 报告都会保留；重新查询 Task 报告时，会选用最新发布的修订版。覆盖卡片的 HTML 文件无法可靠地更新原卡片：手机远程 A/B 实验中，重新进入 Task 后，原卡片仍显示 A，新引用才显示 B。因此，本插件不启用原内嵌卡片的自动替换。请参阅[结束后核对与预览行为](../../docs/ARCHITECTURE.md#completion-reconciliation)。

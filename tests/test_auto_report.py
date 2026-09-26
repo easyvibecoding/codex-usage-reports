@@ -52,14 +52,14 @@ def native_counter(task, turn, total, *, request=None, turn_total=None):
     }}
 
 
-def child_fixture(directory, *, as_root=False):
+def child_fixture(directory, *, as_root=False,
+                  child="00000000-0000-7000-8000-000000000003"):
     """A real nested native Task with a saved 100-token Start baseline."""
     home = directory / "native"
     home.mkdir(parents=True)
     data, workspace = directory / "data", directory / "workspace"
     root = "00000000-0000-7000-8000-000000000001"
     parent = "00000000-0000-7000-8000-000000000002"
-    child = "00000000-0000-7000-8000-000000000003"
     turn = "synthetic-child-identity-turn"
     parent_source = {"subagent": {"thread_spawn": {"parent_thread_id": root}}}
     source = ("vscode" if as_root else

@@ -131,9 +131,16 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py preview "$TASK_ID" 
 
 The turn must have an active baseline. `OUTPUT_DIR` must be an absolute,
 nonsymlink directory inside the native Task visualization root or that Task's
-catalog-recorded workspace. A subagent may use its verified root Task's native
-visualization root. An arbitrary temporary directory is not an accepted
-desktop output root.
+catalog-recorded workspace. If a verified subagent inherits its root Task's
+visualization directory, the runtime relocates the new card into the child's
+own native visualization root, preserving safe subdirectories. Desktop reads
+the reference as the child, so the parent's directory is not its read authority.
+If the sandbox denies that relocated write, the runtime attempts one checked
+write in the child's catalog workspace at `work/codex-usage-cards`, using the
+same snapshot. The returned reference always names the actual output file.
+Unrelated roots, traversal and symlinks remain invalid; they do not trigger a
+fallback. An arbitrary temporary directory is not an accepted desktop output
+root. Previously emitted snapshots and references are not rewritten.
 
 For a subagent, pass that subagent's own `TASK_ID` and `TURN_ID`, not its
 parent's IDs. A preview is a snapshot of the selected Task's current turn; its

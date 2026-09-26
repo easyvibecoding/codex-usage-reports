@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -233,6 +234,286 @@ class AutoPreviewTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.preview()
 
+    def test_nested_child_relocates_inherited_root_using_its_own_uuid_date(self):
+        fixture = child_fixture(self.root / "different-date",
+                                child="00000526-5c00-7000-8000-000000000003")
+        inherited = fixture["home"] / "visualizations/1970/01/01" / fixture["root"]
+        inherited.mkdir(parents=True)
+        previous = inherited / "previous-parent.html"
+        previous.write_text("<p>Earlier parent snapshot</p>")
+        result = preview(fixture["data"], fixture["child"], fixture["turn"],
+                         output_dir=inherited / "cards/shard", home=fixture["home"])
+        own = (fixture["home"] / "visualizations/1970/01/02" / fixture["child"]
+               / "cards/shard")
+        target = next(own.glob("*.html"))
+        self.assertEqual(json.loads(result["reference"].split("\ue202")[1][:-1]),
+                         {"path": str(target)})
+        self.assertIn('data-metric="turn-delta">+100</dd>', target.read_text())
+        self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(previous.read_text(), "<p>Earlier parent snapshot</p>")
+        self.assertEqual(list(inherited.rglob("*")), [previous])
+
+    def test_child_own_native_and_workspace_outputs_keep_the_requested_path(self):
+        fixture = child_fixture(self.root / "own-output")
+        own = fixture["home"] / "visualizations/1970/01/01" / fixture["child"]
+        for directory in (own / "cards", fixture["workspace"] / "visuals"):
+            with self.subTest(directory=directory):
+                result = preview(fixture["data"], fixture["child"], fixture["turn"],
+                                 output_dir=directory, home=fixture["home"])
+                target = next(directory.glob("*.html"))
+                self.assertEqual(json.loads(result["reference"].split("\ue202")[1][:-1]),
+                                 {"path": str(target)})
+
+    def test_child_relocation_rejects_foreign_and_unsafe_roots_before_observing(self):
+        fixture = child_fixture(self.root / "rejected-output")
+        day = fixture["home"] / "visualizations/1970/01/01"
+        inherited = day / fixture["root"]
+        inherited.mkdir(parents=True)
+        linked = inherited / "linked"
+        linked.symlink_to(fixture["workspace"], target_is_directory=True)
+        outside = (day / "00000000-0000-7000-8000-000000000004",
+                   day / fixture["parent"],
+                   fixture["home"] / "visualizations/1970/01/02" / fixture["root"],
+                   inherited / ".." / "escape", linked / "cards", Path("relative/cards"))
+        with patch("codex_usage_reports.auto_preview.snapshot") as observed, patch(
+            "codex_usage_reports.auto_preview.collect"
+        ) as children, patch("codex_usage_reports.turn_quota.observe") as quota:
+            for directory in outside:
+                with self.subTest(directory=directory), self.assertRaises(ValueError):
+                    preview(fixture["data"], fixture["child"], fixture["turn"],
+                            output_dir=directory, home=fixture["home"])
+            observed.assert_not_called()
+            children.assert_not_called()
+            quota.assert_not_called()
+        self.assertFalse((day / fixture["child"]).exists())
+
+    def test_invalid_child_source_cannot_authorize_relocation(self):
+        for change in ("wrong-root", "changed-root", "changed-parent", "source"):
+            with self.subTest(change=change):
+                fixture = child_fixture(self.root / ("bad-lineage-" + change))
+                inherited = (fixture["home"] / "visualizations/1970/01/01"
+                             / fixture["root"])
+                if change == "source":
+                    fixture["path"].write_text(json.dumps({"type": "session_meta", "payload": {
+                        "id": fixture["root"]}}) + "\n")
+                else:
+                    change_child_identity(fixture, change)
+                with patch("codex_usage_reports.auto_preview.collect") as children, patch(
+                    "codex_usage_reports.turn_quota.observe"
+                ) as quota:
+                    result = preview(fixture["data"], fixture["child"], fixture["turn"],
+                                     output_dir=inherited, home=fixture["home"])
+                    self.assertEqual(result["status"], "source_unavailable")
+                    children.assert_not_called()
+                    quota.assert_not_called()
+                self.assertFalse((fixture["home"] / "visualizations").exists())
+
+    def test_relocated_write_permission_failure_uses_child_cwd_without_resnapshot(self):
+        for failure in ("mkdir", "open"):
+            with self.subTest(failure=failure):
+                fixture = child_fixture(self.root / ("fallback-" + failure))
+                day = fixture["home"] / "visualizations/1970/01/01"
+                own = day / fixture["child"]
+                child_workspace = fixture["workspace"] / "child-only"
+                with sqlite3.connect(fixture["home"] / "state_5.sqlite") as catalog:
+                    catalog.execute("UPDATE threads SET cwd=? WHERE id=?",
+                                    (str(child_workspace), fixture["child"]))
+                real_mkdir, real_open = Path.mkdir, os.open
+                denied = []
+
+                def mkdir(path, *args, **kwargs):
+                    if failure == "mkdir" and path.is_relative_to(own):
+                        denied.append(path)
+                        raise PermissionError("synthetic native sandbox denial")
+                    return real_mkdir(path, *args, **kwargs)
+
+                def open_file(path, *args, **kwargs):
+                    if failure == "open" and Path(path).is_relative_to(own):
+                        denied.append(Path(path))
+                        raise PermissionError("synthetic native sandbox denial")
+                    return real_open(path, *args, **kwargs)
+
+                before = recent(fixture["data"])
+                with (
+                    patch.object(Path, "mkdir", mkdir),
+                    patch("codex_usage_reports.auto_preview.os.open", open_file),
+                    patch("codex_usage_reports.auto_preview.snapshot", wraps=snapshot) as observed,
+                    patch("codex_usage_reports.auto_preview.collect",
+                          return_value={"status": "none"}) as children,
+                    patch("codex_usage_reports.turn_quota.observe", return_value=None) as quota,
+                    patch("codex_usage_reports.auto_preview.render_card",
+                          wraps=render_card) as render,
+                ):
+                    result = preview(fixture["data"], fixture["child"], fixture["turn"],
+                                     output_dir=day / fixture["root"] / "cards",
+                                     home=fixture["home"])
+                target = next((child_workspace / "work/codex-usage-cards").glob("*.html"))
+                self.assertEqual(json.loads(result["reference"].split("\ue202")[1][:-1]),
+                                 {"path": str(target)})
+                self.assertEqual(len(denied), 1)
+                if failure == "open":
+                    self.assertEqual(denied[0].name, target.name)
+                self.assertIn('data-metric="turn-delta">+100</dd>', target.read_text())
+                self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+                self.assertFalse((day / fixture["root"]).exists())
+                self.assertFalse((fixture["workspace"] / "work").exists())
+                self.assertEqual(recent(fixture["data"]), before)
+                observed.assert_called_once()
+                children.assert_called_once()
+                quota.assert_called_once()
+                render.assert_called_once()
+
+    def test_relocation_fallback_rejects_missing_unsafe_and_symlink_workspaces(self):
+        for invalid in ("missing", "relative", "dotdot", "cwd-link", "work-link", "card-link"):
+            with self.subTest(invalid=invalid):
+                fixture = child_fixture(self.root / ("unsafe-fallback-" + invalid))
+                day = fixture["home"] / "visualizations/1970/01/01"
+                own = day / fixture["child"]
+                workspace = fixture["workspace"]
+                workspace.mkdir()
+                outside = fixture["home"] / "outside"
+                outside.mkdir()
+                cwd = str(workspace)
+                if invalid == "missing":
+                    cwd = None
+                elif invalid == "relative":
+                    cwd = "relative/workspace"
+                elif invalid == "dotdot":
+                    cwd = str(workspace / ".." / "outside")
+                else:
+                    link = {"cwd-link": workspace / "alias", "work-link": workspace / "work",
+                            "card-link": workspace / "work/codex-usage-cards"}[invalid]
+                    link.parent.mkdir(exist_ok=True)
+                    link.symlink_to(outside, target_is_directory=True)
+                    if invalid == "cwd-link":
+                        cwd = str(link)
+                with sqlite3.connect(fixture["home"] / "state_5.sqlite") as catalog:
+                    catalog.execute("UPDATE threads SET cwd=? WHERE id=?", (cwd, fixture["child"]))
+                real_mkdir = Path.mkdir
+
+                def mkdir(path, *args, **kwargs):
+                    if path.is_relative_to(own):
+                        raise PermissionError("synthetic native sandbox denial")
+                    return real_mkdir(path, *args, **kwargs)
+
+                with patch.object(Path, "mkdir", mkdir), self.assertRaises(
+                    PermissionError if invalid == "missing" else ValueError
+                ):
+                    preview(fixture["data"], fixture["child"], fixture["turn"],
+                            output_dir=day / fixture["root"], home=fixture["home"])
+                self.assertFalse(list(fixture["home"].rglob("*.html")))
+                self.assertFalse(list(workspace.rglob("*.html")))
+
+    def test_relocation_fallback_is_once_only_and_never_overwrites_existing_cards(self):
+        for failure in ("denied", "exists"):
+            with self.subTest(failure=failure):
+                fixture = child_fixture(self.root / ("final-fallback-" + failure))
+                day = fixture["home"] / "visualizations/1970/01/01"
+                own = day / fixture["child"]
+                fallback = fixture["workspace"] / "work/codex-usage-cards"
+                fallback.mkdir(parents=True)
+                previous = fallback / ("codex-turn-" + fixture["key"][:16] + "-123.html")
+                if failure == "exists":
+                    previous.write_text("<p>Earlier child snapshot</p>")
+                real_mkdir = Path.mkdir
+                attempts = []
+
+                def mkdir(path, *args, **kwargs):
+                    attempts.append(path)
+                    if path.is_relative_to(own) or failure == "denied" and path == fallback:
+                        raise PermissionError("synthetic write denial")
+                    return real_mkdir(path, *args, **kwargs)
+
+                with patch.object(Path, "mkdir", mkdir), patch(
+                    "codex_usage_reports.auto_preview.time.time_ns", return_value=123
+                ), self.assertRaises(PermissionError if failure == "denied" else FileExistsError):
+                    preview(fixture["data"], fixture["child"], fixture["turn"],
+                            output_dir=day / fixture["root"], home=fixture["home"])
+                self.assertEqual([path for path in attempts if path == own or path == fallback],
+                                 [own, fallback])
+                if failure == "exists":
+                    self.assertEqual(previous.read_text(), "<p>Earlier child snapshot</p>")
+
+    def test_permission_fallback_requires_an_inherited_parent_native_path(self):
+        fixture = child_fixture(self.root / "no-relocation")
+        own = fixture["home"] / "visualizations/1970/01/01" / fixture["child"]
+        for directory in (own, fixture["workspace"] / "visuals"):
+            with self.subTest(directory=directory):
+                real_mkdir = Path.mkdir
+
+                def mkdir(path, *args, **kwargs):
+                    if path == directory:
+                        raise PermissionError("synthetic own-output denial")
+                    return real_mkdir(path, *args, **kwargs)
+
+                with patch.object(Path, "mkdir", mkdir), self.assertRaises(PermissionError):
+                    preview(fixture["data"], fixture["child"], fixture["turn"],
+                            output_dir=directory, home=fixture["home"])
+                self.assertFalse((fixture["workspace"] / "work").exists())
+
+    def test_relocation_fallback_rechecks_inherited_path_after_write_denial(self):
+        fixture = child_fixture(self.root / "changed-during-write")
+        day = fixture["home"] / "visualizations/1970/01/01"
+        inherited, own = day / fixture["root"], day / fixture["child"]
+        outside = fixture["home"] / "outside"
+        outside.mkdir()
+        real_mkdir = Path.mkdir
+
+        def mkdir(path, *args, **kwargs):
+            if path == own:
+                inherited.parent.mkdir(parents=True)
+                inherited.symlink_to(outside, target_is_directory=True)
+                raise PermissionError("synthetic write denial with changed inherited root")
+            return real_mkdir(path, *args, **kwargs)
+
+        with patch.object(Path, "mkdir", mkdir), self.assertRaises(ValueError):
+            preview(fixture["data"], fixture["child"], fixture["turn"],
+                    output_dir=inherited, home=fixture["home"])
+        self.assertFalse(list(outside.iterdir()))
+        self.assertFalse((fixture["workspace"] / "work").exists())
+
+    def test_relocation_rechecks_inherited_path_after_rendering(self):
+        fixture = child_fixture(self.root / "changed-during-render")
+        day = fixture["home"] / "visualizations/1970/01/01"
+        inherited, own = day / fixture["root"], day / fixture["child"]
+        outside = fixture["home"] / "outside"
+        outside.mkdir()
+
+        def render(receipt):
+            content = render_card(receipt)
+            inherited.parent.mkdir(parents=True)
+            inherited.symlink_to(outside, target_is_directory=True)
+            return content
+
+        with patch("codex_usage_reports.auto_preview.render_card", side_effect=render), \
+                self.assertRaises(ValueError):
+            preview(fixture["data"], fixture["child"], fixture["turn"],
+                    output_dir=inherited, home=fixture["home"])
+        self.assertFalse(list(outside.iterdir()))
+        self.assertFalse(own.exists())
+        self.assertFalse((fixture["workspace"] / "work").exists())
+
+    def test_relocation_rechecks_both_inherited_and_child_roots_after_collection(self):
+        for changed in ("inherited", "child"):
+            with self.subTest(changed=changed):
+                fixture = child_fixture(self.root / ("changed-output-" + changed))
+                day = fixture["home"] / "visualizations/1970/01/01"
+                inherited, own = day / fixture["root"], day / fixture["child"]
+                outside = fixture["home"] / "outside"
+                outside.mkdir()
+
+                def change_path(*args, **kwargs):
+                    day.mkdir(parents=True)
+                    (inherited if changed == "inherited" else own).symlink_to(
+                        outside, target_is_directory=True)
+
+                with patch("codex_usage_reports.turn_quota.observe", side_effect=change_path), \
+                        self.assertRaises(ValueError):
+                    preview(fixture["data"], fixture["child"], fixture["turn"],
+                            output_dir=inherited, home=fixture["home"])
+                self.assertFalse(list(outside.iterdir()))
+                self.assertFalse((fixture["workspace"] / "work").exists())
+
     def test_symlink_ancestor_does_not_authorize_an_external_directory(self):
         self.workspace.mkdir()
         (self.workspace / "alias").symlink_to(self.root, target_is_directory=True)
@@ -385,6 +666,8 @@ class AutoPreviewTest(unittest.TestCase):
         self.assertIn(f"--preview {child} {turn} --data-dir ", context)
         self.assertIn("Use this usage-card command for this subagent's footer; "
                       "inherited usage-card commands belong to other agents.", context)
+        self.assertIn("The preview relocates inherited parent visualization paths "
+                      "and may use this child's checked cwd/work.", context)
         self.assertIn("even in child replies; never relay others' refs.", context)
         self.assertEqual(snapshot(str(child_path), turn)["status"], "subagent")
         self.assertEqual(snapshot(str(child_path), turn, expected_child=child,
@@ -402,7 +685,9 @@ class AutoPreviewTest(unittest.TestCase):
         visual_root = self.root / "visualizations/1970/01/01" / TASK
         result = preview(self.data, child, turn, output_dir=visual_root, home=self.root)
         self.assertEqual(result["status"], "preview")
-        card = next(visual_root.glob("*.html")).read_text()
+        own_visual_root = self.root / "visualizations/1970/01/01" / child
+        card = next(own_visual_root.glob("*.html")).read_text()
+        self.assertFalse(visual_root.exists())
         selector = stable_hash(child)[:12]
         self.assertIn("@" + selector, card)
         self.assertIn("Leaf &lt;child&gt;", card)

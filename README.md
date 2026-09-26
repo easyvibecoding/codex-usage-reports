@@ -39,6 +39,8 @@ Set `TASK_ID` to the exact native Task ID. The [usage guide](docs/USAGE.md) cove
 
 Automatic card instructions apply only to the footer. If the final answer must be exact, JSON-only, code-only, or follow a final-answer schema, skip both the preview and its reference. File formats do not determine eligibility. Eligible parent and child replies append only their own unchanged reference on a separate line, never another agent's reference. See [automatic reports](docs/USAGE.md#automatic-reports).
 
+An inherited parent visualization directory is automatically relocated to the subagent's own directory. If the sandbox denies that write, the same snapshot can use the child's workspace at `work/codex-usage-cards`. Existing cards stay unchanged; start a new Task to load the updated runtime.
+
 ## What it reports
 
 | Scope | Observation |

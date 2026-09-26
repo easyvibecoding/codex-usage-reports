@@ -35,38 +35,55 @@ from .transcript import cache_read_share_percent
 from .util import stable_hash
 
 
+def _native_output_dir(session: str, home: Path) -> Path:
+    identifier = uuid.UUID(session)
+    if identifier.version != 7:
+        raise ValueError("inline preview requires a native UUIDv7 Task")
+    day = datetime.fromtimestamp(int(identifier.hex[:12], 16) / 1000, timezone.utc)
+    return home / "visualizations" / day.strftime("%Y/%m/%d") / session
+
+
+def _check_path(path: Path) -> None:
+    if (not path.is_absolute() or ".." in path.parts
+            or any(p.is_symlink() for p in (path, *path.parents))):
+        raise ValueError("output must be an absolute nonsymlink Task directory")
+
+
 def _checked_output_dir(output_dir: Path, session: str, home: Path, workspace,
                         *, root_session: str | None = None) -> Path:
-    """Accept only known desktop-readable Task roots, before collecting usage.
+    """Validate the requested path and relocate a verified child's inherited root.
 
     Full filesystem access is not the desktop visualization read policy. The
     native root uses the UUIDv7's UTC date, not today's date or a mutable cwd.
     Explicit extra sandbox roots are intentionally unsupported here: the preview
     tool cannot independently verify the desktop's effective policy for them.
     """
-    identifier = uuid.UUID(session)
-    if identifier.version != 7:
-        raise ValueError("inline preview requires a native UUIDv7 Task")
-    day = datetime.fromtimestamp(int(identifier.hex[:12], 16) / 1000, timezone.utc)
-    native = home / "visualizations" / day.strftime("%Y/%m/%d") / session
-    roots = [native]
+    native = _native_output_dir(session, home)
+    _check_path(output_dir)
     if root_session is not None and root_session != session:
-        root_identifier = uuid.UUID(root_session)
-        if root_identifier.version != 7:
-            raise ValueError("inline preview requires a native UUIDv7 root Task")
-        root_day = datetime.fromtimestamp(int(root_identifier.hex[:12], 16) / 1000,
-                                          timezone.utc)
-        roots.append(home / "visualizations" / root_day.strftime("%Y/%m/%d")
-                     / root_session)
+        inherited = _native_output_dir(root_session, home)
+        if output_dir.is_relative_to(inherited):
+            output_dir = native / output_dir.relative_to(inherited)
+            _check_path(output_dir)
+    roots = [native]
     if isinstance(workspace, str) and Path(workspace).is_absolute():
         roots.append(Path(workspace))
-    if (not output_dir.is_absolute() or ".." in output_dir.parts
-            or any(p.is_symlink() for p in (output_dir, *output_dir.parents))):
-        raise ValueError("output must be an absolute nonsymlink Task directory")
     if not any(root.is_absolute() and ".." not in root.parts
                and output_dir.is_relative_to(root) for root in roots):
         raise ValueError("output is outside the Task's desktop-readable roots")
     return output_dir
+
+
+def _write_card(output_dir: Path, name: str, content: str, *, session: str,
+                home: Path, workspace) -> Path:
+    _checked_output_dir(output_dir, session, home, workspace)
+    output_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _checked_output_dir(output_dir, session, home, workspace)
+    target = output_dir / name
+    descriptor = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "w") as output:
+        output.write(content)
+    return target
 
 
 def render_card(receipt: dict) -> str:
@@ -220,14 +237,17 @@ def preview(root: Path, session: str, turn: str, *, output_dir: Path, home=None)
         ).fetchone()
         # Optional column on older catalogs; absence cannot authorize another root.
         columns = {r[1] for r in catalog.connection.execute("PRAGMA table_info(threads)")}
-        workspace = catalog.connection.execute(
+        workspace_row = catalog.connection.execute(
             "SELECT cwd FROM threads WHERE id=?", (session,)
         ).fetchone() if "cwd" in columns else None
+        workspace = workspace_row[0] if workspace_row else None
         native_home = Path(home or os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+        requested_output_dir = output_dir
         output_dir = _checked_output_dir(
-            output_dir, session, native_home, workspace[0] if workspace else None,
+            requested_output_dir, session, native_home, workspace,
             root_session=root_session,
         )
+        relocated = output_dir != requested_output_dir
         expected = ({"expected_child": session, "expected_parent": lineage["parent_id"],
                      "expected_root": root_session} if lineage else {})
         current = snapshot(native[0] if native else None, turn, **expected)
@@ -258,17 +278,26 @@ def preview(root: Path, session: str, turn: str, *, output_dir: Path, home=None)
         "subagents": children, "quota": quota,
         **locale,
     }
-    # Recheck immediately before writing, after potentially slow collection.
-    _checked_output_dir(output_dir, session, native_home, workspace[0] if workspace else None,
-                        root_session=root_session)
-    output_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-    target = output_dir / ("codex-turn-" + key[:16] + "-" + str(time.time_ns()) + ".html")
+    name = "codex-turn-" + key[:16] + "-" + str(time.time_ns()) + ".html"
     content = render_card(receipt)
     if len(content.encode()) > 1_000_000:
         raise ValueError("card too large")
-    descriptor = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(descriptor, "w") as output:
-        output.write(content)
+    # Recheck immediately before writing, after collection and rendering.
+    _checked_output_dir(requested_output_dir, session, native_home, workspace,
+                        root_session=root_session)
+    try:
+        target = _write_card(output_dir, name, content, session=session,
+                             home=native_home, workspace=workspace)
+    except PermissionError:
+        if not relocated or not isinstance(workspace, str):
+            raise
+        _checked_output_dir(requested_output_dir, session, native_home, workspace,
+                            root_session=root_session)
+        # Only the current child's catalog cwd is eligible, with the same
+        # receipt and exclusive target name. Failure here remains nonblocking.
+        fallback = Path(workspace) / "work/codex-usage-cards"
+        target = _write_card(fallback, name, content, session=session,
+                             home=native_home, workspace=workspace)
     reference = (
         "\ue200visualize\ue202"
         + json.dumps({"path": str(target)}, ensure_ascii=False, separators=(",", ":")) + "\ue201"

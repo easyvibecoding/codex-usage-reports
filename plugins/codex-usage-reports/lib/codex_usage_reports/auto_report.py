@@ -54,7 +54,8 @@ def _footer(directory: Path, key: str, payload: dict[str, Any], locale="zh-Hant"
     ])
     owner = (
         "Use this usage-card command for this subagent's footer; inherited usage-card "
-        "commands belong to other agents."
+        "commands belong to other agents. The preview relocates inherited parent visualization "
+        "paths and may use this child's checked cwd/work."
         if payload.get("agent_id") else
         "Use this usage-card command for the parent Task's footer; subagents use their "
         "own usage-card command."
