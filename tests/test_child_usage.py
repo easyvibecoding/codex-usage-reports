@@ -6,6 +6,7 @@ import stat
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
@@ -167,7 +168,7 @@ class ChildUsageTest(unittest.TestCase):
         self.assertEqual(result["request_count"], 1)
         self.assertEqual(result["rows"][0]["display_name"], "子代理 A")
         self.assertTrue(result["rows"][0]["terminal_observed"])
-        with sqlite3.connect(self.root / DB_NAME) as stored:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as stored, stored:
             self.assertEqual(stored.execute("SELECT source FROM requests").fetchone()[0], "hook")
 
     def test_family_selects_two_children_grandchild_not_unrelated(self) -> None:
@@ -213,7 +214,7 @@ class ChildUsageTest(unittest.TestCase):
         # The hook repeats the root session id for a nested agent. An absent
         # transcript path must resolve through the verified catalog row.
         self._stop(GRANDCHILD, None)
-        with sqlite3.connect(self.root / DB_NAME) as stored:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as stored, stored:
             parent_hash, source = stored.execute(
                 "SELECT parent_hash,source FROM requests"
             ).fetchone()
@@ -247,7 +248,7 @@ class ChildUsageTest(unittest.TestCase):
         self._stop(GRANDCHILD, path, parent=UNRELATED)
         self.assertFalse((self.root / DB_NAME).exists())
         self._stop(GRANDCHILD, path)
-        with sqlite3.connect(self.root / DB_NAME) as stored:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as stored, stored:
             self.assertEqual(stored.execute("SELECT count(*) FROM requests").fetchone()[0], 0)
         result = collect(self.root, CHILD_A, WINDOW_START, WINDOW_START + 20,
                          home=self.home)
@@ -664,7 +665,7 @@ class ChildUsageTest(unittest.TestCase):
         self._stop(CHILD_A, path)
         path.unlink()
 
-        with sqlite3.connect(self.root / DB_NAME) as reopened:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as reopened, reopened:
             self.assertEqual(reopened.execute(
                 "SELECT count(*) FROM requests WHERE child_hash=? AND conflict=0",
                 (stable_hash(CHILD_A),),
@@ -691,7 +692,7 @@ class ChildUsageTest(unittest.TestCase):
             agent_hash=stable_hash(CHILD_A), now=WINDOW_START + 12,
         )
         path.unlink()
-        with sqlite3.connect(self.root / DB_NAME) as reopened:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as reopened, reopened:
             self.assertEqual(reopened.execute("SELECT count(*) FROM requests").fetchone()[0], 0)
             self.assertEqual(reopened.execute("SELECT count(*) FROM agents").fetchone()[0], 0)
         result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
@@ -786,7 +787,7 @@ class ChildUsageTest(unittest.TestCase):
                     [metadata(child, PARENT), metadata(child, UNRELATED, 1)], name="revoked",
                 )
                 self._stop(child, path)
-        with sqlite3.connect(self.root / DB_NAME) as reopened:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as reopened, reopened:
             rows = reopened.execute("SELECT child_hash FROM child_revocations").fetchall()
         self.assertEqual(len(rows), 2)
         self.assertIn(("*",), rows)
@@ -804,12 +805,12 @@ class ChildUsageTest(unittest.TestCase):
             name="A",
         )
         self._stop(CHILD_A, path)
-        with sqlite3.connect(self.root / DB_NAME) as legacy:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as legacy, legacy:
             legacy.execute("DROP TABLE child_revocations")
         result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
         self.assertEqual(result["usage"]["total"], 23)
         self.assertEqual(result["status"], "observed")
-        with sqlite3.connect(self.root / DB_NAME) as upgraded:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as upgraded, upgraded:
             self.assertEqual(upgraded.execute(
                 "SELECT count(*) FROM child_revocations"
             ).fetchone()[0], 0)
@@ -822,7 +823,7 @@ class ChildUsageTest(unittest.TestCase):
             name="A",
         )
         self._stop(CHILD_A, path)
-        with sqlite3.connect(self.root / DB_NAME) as broken:
+        with closing(sqlite3.connect(self.root / DB_NAME)) as broken, broken:
             broken.execute("ALTER TABLE child_revocations RENAME COLUMN child_hash TO unexpected")
         result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
         self.assertIsNone(result["usage"])

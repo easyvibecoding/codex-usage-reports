@@ -3,9 +3,9 @@
   "plugin": "codex-usage-reports",
   "channel": "stable",
   "version": "0.7.1",
-  "sequence": 1790392061,
+  "sequence": 1790392814,
   "bootstrap_sha256": "c695a3f13d96e3e3f0b6756d5284b21906ff2f17e069427d96fb9f5b0a44d4ca",
-  "runtime_sha256": "2c97261461c7afcb3a6e69f1cabb8f7b63ad4f7af1e211a632d0975f988614a5",
-  "runtime_size": 368855,
-  "signature": "PVt4CzEcyUYt668YYFyLQWBbSabb0o58IntLgu5IF5jv+v9e3kVSXsjl8xHtj6jecZB1eCmzjKqXsIwXq+nJDZMwaxbTgGCkSzeSueQhGe/xEjIkvXivSHf1dcUI+WHeRhwuv+8VHaE+EgLlZgdZQXsrvrSJgAM57ZCe5GuNsMwYqCCzf+qK9LBHeV9Vw2mF/DgOTkMnBKZqu3s+dXrDVxFBAjgEaltsWy1TJgUBSMa4aHxnFUgNpbecV5aRLh0xNpu6BVfdzjkJkRS6W9sTetMICv+j2GELwZxVZc+NAJR+PIux8IjUbxE74lmFt1eNSuaIsTec0YSki4YOFI/t44g2pTuhH2U440NgLCASlRSKvMNFf1RoN1Q2Mm1GcUxdti6SEtjpqcw9utsfxuWYwOLmkeQtmCbdMdFpUtTyyc17Xva0O2vRIrPy1PfQiWvxPsKFo2ujn1epQT3SAaRNctlZrqrdjaa8oysrzfgQoE4STuenXeLgxr6W9qgFgrs2"
+  "runtime_sha256": "021c5b2fc5176b23290fa97ca0b97e41ba595c3bc4686922d6d9e3971ec26253",
+  "runtime_size": 368913,
+  "signature": "iPKuFmnsVVr4NKyxqVEz5BUh720Q6zodrn2CekqU6V4c8JajP0vPNsM2+MsxFQGXCRGSAUcs7BXHKiPDNZLwsClkmGESxsl+qy99fEoPiWZmakNMSHQGhumcoMTReaLLwBRgrHDnoZ+PC44X5xBYDrRLlWB/GWrw38LbKOM1SjPahaIaV4/x3bu3D8ITngNXIxQNfGV4/4owJp8yhqWn8CqLGEt4e+ZueG/gYOYesZ+qYDhcfV1u8yzrwPkeyevPG1jTEY9Gi4x7VBIybiOMoGTcP1V+B7H75zn5O6iz3+yXey7qa5iTq5QiELcIjDPAdEDnCHtCQj+MT8vJXlhHyw3goC+glF67DskGFD4VvLs25QrtQ8KSrvd6ADt8gsiSQJWLgExrDfaimZk5wwtUuQVZay4qgQYtnHDfY2C/XyeeVXcAIj5+BwH8R/ZJM/mE9GZsakWk8bmP9EGTzhCPlcA2Fb2nJoy5wLttXXjybeQpKcxYxRvBjypqxLYI2F1c"
 }

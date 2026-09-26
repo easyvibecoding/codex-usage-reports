@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -43,7 +44,7 @@ class ExecActivityTest(unittest.TestCase):
         self.project.mkdir()
         self.path = self.home / "synthetic.jsonl"
         self.now = time.time()
-        with sqlite3.connect(self.home / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(self.home / "state_5.sqlite")) as db, db:
             db.execute("CREATE TABLE threads (id TEXT,source TEXT,cwd TEXT,rollout_path TEXT,"
                        "created_at INTEGER,updated_at INTEGER)")
             db.execute("INSERT INTO threads VALUES (?,?,?,?,?,?)",
@@ -113,7 +114,7 @@ class ExecActivityTest(unittest.TestCase):
         self.assertEqual(row["usage_status"], "counter_reset")
 
     def test_resumed_session_is_recent_but_cumulative_is_not_window_delta(self):
-        with sqlite3.connect(self.home / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(self.home / "state_5.sqlite")) as db, db:
             db.execute("UPDATE threads SET created_at=? WHERE id=?", (self.now - 90000, TASK))
         row = self.scan()["activities"][0]
         self.assertEqual(row["usage_scope"], "session_cumulative")
@@ -195,7 +196,7 @@ class ExecActivityTest(unittest.TestCase):
                                   text=True, capture_output=True, timeout=10)
         before = call("PreToolUse")
         self.assertEqual(before.returncode, 0, before.stderr)
-        with sqlite3.connect(self.home / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(self.home / "state_5.sqlite")) as db, db:
             db.execute("UPDATE threads SET created_at=?,updated_at=? WHERE id=?",
                        (time.time(), time.time(), TASK))
         after = call("PostToolUse")

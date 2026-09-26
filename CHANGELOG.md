@@ -6,6 +6,7 @@
 - Require the original Task role, root and direct parent across preview, Stop and completion reconciliation; current catalog data cannot fill missing historical identity evidence.
 - Use child-specific own-usage, settings and descendant labels in cards and Markdown/HTML receipts across all nine report languages, with the same direct parent and hashed selector.
 - Preserve the independent report-only runtime and existing hook definitions. An ordinary matching scan cannot clear a revoked child identity; unreadable or saturated revocation state stays partial or unavailable.
+- Close the readonly timing-index connection after quota observation and test fixture connections, keeping Python 3.13 CLI output free of resource warnings.
 
 ## 0.7.0 — 2026-09-26
 

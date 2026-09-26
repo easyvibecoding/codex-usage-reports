@@ -13,7 +13,7 @@ import textwrap
 import threading
 import time
 import unittest
-from contextlib import redirect_stdout
+from contextlib import closing, redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -45,7 +45,7 @@ class ReconcileTest(unittest.TestCase):
         self.write(self.header, fixtures.counter(1000), self.native_event("task_started"),
                    {"type": "turn_context", "payload": {
                        "turn_id": TURN, "model": "example-model", "effort": "low"}})
-        with sqlite3.connect(self.home / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(self.home / "state_5.sqlite")) as db, db:
             db.execute("CREATE TABLE threads (id TEXT,name TEXT,title TEXT,agent_nickname TEXT,"
                        "agent_role TEXT,agent_path TEXT,source TEXT,rollout_path TEXT)")
             db.execute("INSERT INTO threads VALUES (?,?,?,NULL,NULL,NULL,?,?)",
@@ -103,7 +103,7 @@ class ReconcileTest(unittest.TestCase):
         return spawn, process
 
     def job(self):
-        with sqlite3.connect(self.directory / "timing.sqlite3") as db:
+        with closing(sqlite3.connect(self.directory / "timing.sqlite3")) as db, db:
             db.row_factory = sqlite3.Row
             row = db.execute("SELECT * FROM reconciliations WHERE key=?", (self.key,)).fetchone()
             return dict(row) if row else None
@@ -184,7 +184,7 @@ class ReconcileTest(unittest.TestCase):
             {"type": "turn_context", "payload": {"turn_id": child_turn,
                                                "thread_id": child, "session_id": TASK}},
         )))
-        with sqlite3.connect(self.home / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(self.home / "state_5.sqlite")) as db, db:
             db.execute("INSERT INTO threads VALUES (?,?,?,NULL,NULL,NULL,?,?)",
                        (child, "Synthetic child", "EXAMPLE PRIVATE CHILD TITLE",
                         json.dumps(source), str(child_path)))
@@ -193,7 +193,7 @@ class ReconcileTest(unittest.TestCase):
                  "transcript_path": str(child_path)}
         self.assertIn("hookSpecificOutput", handle(start, self.data, home=self.home,
                                                    wall=self.now, monotonic=5000))
-        with sqlite3.connect(self.directory / "timing.sqlite3") as db:
+        with closing(sqlite3.connect(self.directory / "timing.sqlite3")) as db, db:
             baseline = json.loads(db.execute("SELECT baseline FROM turns WHERE key=?",
                                              (stable_hash([child, child_turn]),)).fetchone()[0])
         self.assertIsNone(baseline["usage"])
@@ -553,7 +553,7 @@ class ReconcileTest(unittest.TestCase):
         self.complete()
         run(self.payload, self.data, home=self.home, delays=(0,))
         database = self.directory / "timing.sqlite3"
-        with sqlite3.connect(database) as db:
+        with closing(sqlite3.connect(database)) as db, db:
             dump = "\n".join(db.iterdump())
         for private in (TASK, TURN, str(self.path), self.payload["prompt"]):
             self.assertNotIn(private, dump)

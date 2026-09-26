@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -71,7 +72,7 @@ def child_fixture(directory, *, as_root=False):
             "session_id": child if as_root else root}},
         counter(100),
     )))
-    with sqlite3.connect(home / "state_5.sqlite") as db:
+    with closing(sqlite3.connect(home / "state_5.sqlite")) as db, db:
         db.execute("CREATE TABLE threads (id TEXT PRIMARY KEY,name TEXT,agent_nickname TEXT,"
                    "agent_role TEXT,agent_path TEXT,source TEXT,rollout_path TEXT,cwd TEXT)")
         db.executemany("INSERT INTO threads VALUES (?,?,NULL,NULL,NULL,?,?,?)", (
@@ -108,7 +109,8 @@ def change_child_identity(fixture, change):
         "legacy-child", "legacy-root",
     )
     if change in baseline_changes:
-        with sqlite3.connect(fixture["data"] / "auto-reports/timing.sqlite3") as timing:
+        with (closing(sqlite3.connect(fixture["data"] / "auto-reports/timing.sqlite3")) as timing,
+              timing):
             baseline = json.loads(timing.execute(
                 "SELECT baseline FROM turns WHERE key=?", (key,)
             ).fetchone()[0])
@@ -132,7 +134,7 @@ def change_child_identity(fixture, change):
             timing.execute("UPDATE turns SET baseline=? WHERE key=?", (json.dumps(baseline), key))
     elif change in ("child-to-root", "root-to-child", "changed-root", "changed-parent"):
         source = "vscode"
-        with sqlite3.connect(fixture["home"] / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(fixture["home"] / "state_5.sqlite")) as db, db:
             if change == "changed-root":
                 new_root = "00000000-0000-7000-8000-000000000004"
                 db.execute("INSERT INTO threads VALUES (?,?,NULL,NULL,NULL,'vscode',NULL,?)",
@@ -879,7 +881,7 @@ class AutoReportTest(unittest.TestCase):
             {"type": "event_msg", "payload": {"type": "task_started",
                                                "turn_id": child_turn}},
         )))
-        with sqlite3.connect(home / "state_5.sqlite") as database:
+        with closing(sqlite3.connect(home / "state_5.sqlite")) as database, database:
             database.execute("CREATE TABLE threads (id TEXT,name TEXT,agent_nickname TEXT,"
                              "agent_role TEXT,agent_path TEXT,source TEXT,rollout_path TEXT)")
             database.execute("INSERT INTO threads VALUES (?,?,NULL,NULL,?,?,?)",

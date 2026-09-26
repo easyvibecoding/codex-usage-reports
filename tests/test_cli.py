@@ -8,7 +8,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import closing, redirect_stderr, redirect_stdout
 from html import unescape
 from pathlib import Path
 from unittest.mock import patch
@@ -37,7 +37,7 @@ class CliTest(unittest.TestCase):
         self.page = self.native / "synthetic.jsonl"
         self.page.write_text(json.dumps({"type": "session_meta", "payload": {"id": TASK}})
                              + "\n" + json.dumps(counter(1000)) + "\n")
-        with sqlite3.connect(self.native / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(self.native / "state_5.sqlite")) as db, db:
             db.execute("CREATE TABLE threads (id TEXT,name TEXT,title TEXT,agent_nickname TEXT,"
                        "agent_role TEXT,agent_path TEXT,source TEXT,rollout_path TEXT)")
             db.execute("INSERT INTO threads VALUES (?,?,?,NULL,NULL,NULL,?,?)",
@@ -122,7 +122,7 @@ class CliTest(unittest.TestCase):
                                                "turn_id": "synthetic-child-turn"}},
             counter(300),
         )))
-        with sqlite3.connect(self.native / "state_5.sqlite") as db:
+        with closing(sqlite3.connect(self.native / "state_5.sqlite")) as db, db:
             db.execute("INSERT INTO threads VALUES (?,?,?,NULL,NULL,NULL,?,?)",
                        (child, "Synthetic <child>", "PRIVATE CHILD TITLE",
                         json.dumps(source), str(child_path)))

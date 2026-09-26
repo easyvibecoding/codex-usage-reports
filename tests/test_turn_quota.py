@@ -5,6 +5,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -31,13 +32,13 @@ class TurnQuotaTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         (self.root / "auto-reports").mkdir()
-        with sqlite3.connect(self.root / "auto-reports/timing.sqlite3") as db:
+        with closing(sqlite3.connect(self.root / "auto-reports/timing.sqlite3")) as db, db:
             db.execute("CREATE TABLE turns (key TEXT PRIMARY KEY, session_hash TEXT, "
                        "turn_hash TEXT, started REAL, state TEXT)")
 
     def add(self, number, *, task="example-task", started=None):
         key = stable_hash([task, str(number)])
-        with sqlite3.connect(self.root / "auto-reports/timing.sqlite3") as db:
+        with closing(sqlite3.connect(self.root / "auto-reports/timing.sqlite3")) as db, db:
             db.execute("INSERT INTO turns VALUES (?,?,?,?,'started')",
                        (key, stable_hash(task), stable_hash(str(number)), started or number * 100))
         return key
@@ -46,6 +47,31 @@ class TurnQuotaTest(unittest.TestCase):
         with patch.object(quota, "read_meter_sources", return_value=value) as reader:
             result = quota.observe(self.root, key)
         return result, reader
+
+    def test_observe_closes_connections_after_capture_and_unknown_turn(self):
+        existing = self.add(1)
+        original_connect = sqlite3.connect
+        for key, expected_connections in ((existing, 2), (stable_hash("missing"), 1)):
+            with self.subTest(known_turn=key == existing):
+                opened = []
+
+                def track_connection(*args, **kwargs):
+                    connection = original_connect(*args, **kwargs)
+                    opened.append(connection)
+                    self.addCleanup(connection.close)
+                    return connection
+
+                with patch.object(quota.sqlite3, "connect", side_effect=track_connection):
+                    result, reader = self.observe(key, source())
+                self.assertEqual(len(opened), expected_connections)
+                for connection in opened:
+                    with self.assertRaises(sqlite3.ProgrammingError):
+                        connection.execute("SELECT 1")
+                if key == existing:
+                    reader.assert_called_once()
+                else:
+                    reader.assert_not_called()
+                    self.assertEqual(result["status"], "unavailable")
 
     def test_baseline_next_turn_fractional_remaining_delta_and_private_storage(self):
         first = self.add(1)
@@ -59,7 +85,7 @@ class TurnQuotaTest(unittest.TestCase):
                          (79.75, -0.25))
         self.assertEqual(b["rows"][0]["comparison"], "observed")
         self.assertEqual(quota.saved(self.root, second), b)
-        with sqlite3.connect(self.root / "auto-reports/quota.sqlite3") as db:
+        with closing(sqlite3.connect(self.root / "auto-reports/quota.sqlite3")) as db, db:
             raw = " ".join(r[0] for r in db.execute("SELECT payload FROM snapshots"))
         for forbidden in ("DROP ME", "example-account", "example@example.invalid", "example-task"):
             self.assertNotIn(forbidden, raw)

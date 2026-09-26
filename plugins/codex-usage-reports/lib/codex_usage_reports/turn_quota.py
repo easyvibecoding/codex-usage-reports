@@ -12,6 +12,7 @@ import os
 import re
 import sqlite3
 import stat
+from contextlib import closing
 from decimal import Decimal
 from pathlib import Path
 from urllib.parse import quote
@@ -212,8 +213,8 @@ def observe(root: Path, key: str, *, home=None) -> dict:
     try:
         timing = root / "auto-reports/timing.sqlite3"
         _regular(timing)
-        with sqlite3.connect("file:" + quote(str(timing.absolute())) + "?mode=ro",
-                             uri=True, timeout=0.25) as index:
+        with (closing(sqlite3.connect("file:" + quote(str(timing.absolute())) + "?mode=ro",
+                                      uri=True, timeout=0.25)) as index, index):
             index.row_factory = sqlite3.Row
             turn = index.execute("SELECT * FROM turns WHERE key=?", (key,)).fetchone()
             if turn is None or turn["state"] not in ("started", "short"):

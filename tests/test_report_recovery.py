@@ -6,6 +6,7 @@ import sqlite3
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -164,7 +165,8 @@ class ReportRecoveryTest(unittest.TestCase):
         self.event(tool_input={"command": "DO NOT STORE THIS"})
         self.event("Stop")
         self.assertEqual(recent(self.data)[0]["state"], "reported")
-        with sqlite3.connect(self.data / "auto-reports/timing.sqlite3") as connection:
+        with (closing(sqlite3.connect(self.data / "auto-reports/timing.sqlite3")) as connection,
+              connection):
             baseline = connection.execute("SELECT baseline FROM turns").fetchone()[0]
         for private in (self.session, self.turn, str(self.page), "DO NOT STORE THIS"):
             self.assertNotIn(private, baseline)
