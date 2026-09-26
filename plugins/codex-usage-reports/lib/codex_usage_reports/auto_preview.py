@@ -20,6 +20,7 @@ from string import Template
 from urllib.parse import quote
 
 from .auto_report import (
+    _baseline_identity_matches,
     _catalog_child_lineage,
     _delta,
     child_coverage,
@@ -75,7 +76,8 @@ def render_card(receipt: dict) -> str:
     parent = receipt["usage"]
     task_usage = receipt.get("task_usage")
     children = receipt.get("subagents") or {"status": "unavailable"}
-    child_scope = receipt.get("scope") == "subagent"
+    scope = receipt.get("scope", "")
+    child_scope = scope == "subagent" or scope.startswith("agent_turn_")
     usage, complete = observed_total(parent, children)
     pending = receipt.get("usage_status") in ("first_turn_usage_pending", "turn_usage_pending")
 
@@ -129,9 +131,12 @@ def render_card(receipt: dict) -> str:
         "context_heading", "context_note", "combined",
     )})
     if child_scope:
-        values.update(label_parent=text("own_agent"), label_combined=text("child_combined"),
-                      label_task_total=text("child_task_total"),
-                      label_card_note=text("child_card_note"))
+        values.update({"label_" + key: text(child_key) for key, child_key in (
+            ("parent", "own_agent"), ("combined", "child_combined"),
+            ("task_total", "child_task_total"), ("turn_delta", "child_turn_delta"),
+            ("context_heading", "child_context_heading"),
+            ("child_subtotal", "child_descendant_subtotal"), ("card_note", "child_card_note"),
+        )})
     escaped = {k: escape(str(v)) for k, v in values.items()}
     # Native display names are data. Only this fixed markup is inserted unescaped.
     if len(context_pairs) > 1:
@@ -195,12 +200,21 @@ def preview(root: Path, session: str, turn: str, *, output_dir: Path, home=None)
         return {"status": "below_threshold"}
     locale = resolve_locale(home=home)
     text = ReportText(locale["locale"])
+    baseline = json.loads(row["baseline"])
     with TaskCatalog(home, unnamed_label=text("unnamed")) as catalog:
         task = catalog.get(session)
         lineage = _catalog_child_lineage(catalog, task) if task["role"] == "subagent" else None
         if task["role"] == "subagent" and lineage is None:
             return {"status": "subagent"}
         root_session = lineage["root_id"] if lineage else None
+        # Check roots as well as children: a current role cannot replace the
+        # Start role or authorize another root's counters, settings or descendants.
+        if not _baseline_identity_matches(
+            baseline, stable_hash(session),
+            root_hash=stable_hash(root_session) if lineage else None,
+            direct_parent_hash=stable_hash(lineage["parent_id"]) if lineage else None,
+        ):
+            return {"status": "source_unavailable"}
         native = catalog.connection.execute(
             "SELECT rollout_path FROM threads WHERE id=?", (session,)
         ).fetchone()
@@ -218,12 +232,6 @@ def preview(root: Path, session: str, turn: str, *, output_dir: Path, home=None)
                      "expected_root": root_session} if lineage else {})
         current = snapshot(native[0] if native else None, turn, **expected)
     if current.get("task_hash") != stable_hash(session):
-        return {"status": "source_unavailable"}
-    baseline = json.loads(row["baseline"])
-    if (baseline.get("task_hash") != stable_hash(session)
-            or (lineage and (baseline.get("root_hash") != stable_hash(root_session)
-                             or baseline.get("direct_parent_hash") !=
-                             stable_hash(lineage["parent_id"])))):
         return {"status": "source_unavailable"}
     usage, status = _delta(baseline, current)
     if (status == "counter_unavailable" and baseline.get("fresh_turn_start")

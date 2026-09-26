@@ -51,6 +51,124 @@ def native_counter(task, turn, total, *, request=None, turn_total=None):
     }}
 
 
+def child_fixture(directory, *, as_root=False):
+    """A real nested native Task with a saved 100-token Start baseline."""
+    home = directory / "native"
+    home.mkdir(parents=True)
+    data, workspace = directory / "data", directory / "workspace"
+    root = "00000000-0000-7000-8000-000000000001"
+    parent = "00000000-0000-7000-8000-000000000002"
+    child = "00000000-0000-7000-8000-000000000003"
+    turn = "synthetic-child-identity-turn"
+    parent_source = {"subagent": {"thread_spawn": {"parent_thread_id": root}}}
+    source = ("vscode" if as_root else
+              {"subagent": {"thread_spawn": {"parent_thread_id": parent}}})
+    path = home / "synthetic-child.jsonl"
+    path.write_text("".join(json.dumps(row) + "\n" for row in (
+        {"type": "session_meta", "payload": {"id": child, "source": source}},
+        {"type": "event_msg", "timestamp": "2026-01-01T00:00:00+00:00", "payload": {
+            "type": "task_started", "turn_id": turn, "thread_id": child,
+            "session_id": child if as_root else root}},
+        counter(100),
+    )))
+    with sqlite3.connect(home / "state_5.sqlite") as db:
+        db.execute("CREATE TABLE threads (id TEXT PRIMARY KEY,name TEXT,agent_nickname TEXT,"
+                   "agent_role TEXT,agent_path TEXT,source TEXT,rollout_path TEXT,cwd TEXT)")
+        db.executemany("INSERT INTO threads VALUES (?,?,NULL,NULL,NULL,?,?,?)", (
+            (root, "Synthetic root", "vscode", None, str(workspace)),
+            (parent, "Synthetic direct <parent>", json.dumps(parent_source), None, str(workspace)),
+            (child, "Synthetic <child>", json.dumps(source), str(path), str(workspace)),
+        ))
+    payload = {"session_id": root, "agent_id": child, "turn_id": turn,
+               "transcript_path": str(path), "model": "synthetic-start-model"}
+    if as_root:
+        payload.pop("agent_id")
+        payload["session_id"] = child
+    result = handle({**payload, "hook_event_name": "UserPromptSubmit" if as_root else
+                    "SubagentStart"}, data, home=home,
+                    wall=1000, monotonic=1000)
+    with path.open("a") as stream:
+        stream.write("".join(json.dumps(row) + "\n" for row in (
+            {"type": "turn_context", "payload": {
+                "turn_id": turn, "thread_id": child, "session_id": child if as_root else root,
+                "model": "synthetic-child-model", "effort": "high"}},
+            counter(200),
+        )))
+    return {"home": home, "data": data, "workspace": workspace, "path": path,
+            "root": root, "parent": parent, "child": child, "turn": turn,
+            "payload": payload, "key": stable_hash([child, turn]), "start": result}
+
+
+def change_child_identity(fixture, change):
+    """Alter one native/Start identity fact while keeping the same source file."""
+    key = fixture["key"]
+    baseline_changes = (
+        "missing-root", "wrong-root", "missing-parent", "wrong-parent", "wrong-task",
+        "explicit-parent", "unknown-role", "null-role", "no-role-evidence",
+        "legacy-child", "legacy-root",
+    )
+    if change in baseline_changes:
+        with sqlite3.connect(fixture["data"] / "auto-reports/timing.sqlite3") as timing:
+            baseline = json.loads(timing.execute(
+                "SELECT baseline FROM turns WHERE key=?", (key,)
+            ).fetchone()[0])
+            if change in ("legacy-child", "legacy-root", "no-role-evidence"):
+                baseline.pop("source_role", None)
+                if change == "no-role-evidence":
+                    for field in ("start_event", "root_hash", "direct_parent_hash"):
+                        baseline.pop(field, None)
+            elif change in ("explicit-parent", "unknown-role", "null-role"):
+                baseline["source_role"] = {
+                    "explicit-parent": "parent", "unknown-role": "synthetic-unknown-role",
+                    "null-role": None,
+                }[change]
+            elif change.startswith("missing"):
+                field = "root_hash" if "root" in change else "direct_parent_hash"
+                baseline.pop(field, None)
+            else:
+                field = "root_hash" if "root" in change else (
+                    "direct_parent_hash" if "parent" in change else "task_hash")
+                baseline[field] = "f" * 64
+            timing.execute("UPDATE turns SET baseline=? WHERE key=?", (json.dumps(baseline), key))
+    elif change in ("child-to-root", "root-to-child", "changed-root", "changed-parent"):
+        source = "vscode"
+        with sqlite3.connect(fixture["home"] / "state_5.sqlite") as db:
+            if change == "changed-root":
+                new_root = "00000000-0000-7000-8000-000000000004"
+                db.execute("INSERT INTO threads VALUES (?,?,NULL,NULL,NULL,'vscode',NULL,?)",
+                           (new_root, "Synthetic changed root", str(fixture["workspace"])))
+                db.execute("UPDATE threads SET source=? WHERE id=?", (json.dumps({
+                    "subagent": {"thread_spawn": {"parent_thread_id": new_root}}
+                }), fixture["parent"]))
+                fixture["payload"]["session_id"] = new_root
+                return
+            if change in ("root-to-child", "changed-parent"):
+                direct_parent = fixture["parent"] if change == "root-to-child" else fixture["root"]
+                source = {"subagent": {"thread_spawn": {"parent_thread_id": direct_parent}}}
+            db.execute("UPDATE threads SET source=? WHERE id=?",
+                       (json.dumps(source), fixture["child"]))
+        rows = [json.loads(row) for row in fixture["path"].read_text().splitlines()]
+        rows[0]["payload"]["source"] = source
+        for row in rows:
+            payload = row["payload"]
+            if "session_id" in payload:
+                payload["session_id"] = (fixture["child"] if change == "child-to-root"
+                                         else fixture["root"])
+        rows.extend((
+            {"type": "turn_context", "payload": {
+                "turn_id": fixture["turn"], "model": "synthetic-foreign-model", "effort": "low"}},
+            counter(98700),
+        ))
+        fixture["path"].write_text("".join(json.dumps(row) + "\n" for row in rows))
+        fixture["payload"] = {"session_id": fixture["child"] if change == "child-to-root"
+                              else fixture["root"], "turn_id": fixture["turn"],
+                              "transcript_path": str(fixture["path"])}
+        if change != "child-to-root":
+            fixture["payload"]["agent_id"] = fixture["child"]
+    elif change != "control":
+        raise ValueError("unknown synthetic identity change")
+
+
 class AutoReportTest(unittest.TestCase):
     def setUp(self):
         locale = patch("codex_usage_reports.auto_report.resolve_locale",
@@ -649,6 +767,45 @@ class AutoReportTest(unittest.TestCase):
                     content = path.read_text()
                     self.assertNotIn("98,000", content)
                     self.assertNotIn("example-foreign-model", content)
+
+    def test_child_stop_requires_original_task_root_parent_and_role(self):
+        changes = ("missing-root", "wrong-root", "missing-parent", "wrong-parent",
+                   "wrong-task", "changed-root", "changed-parent", "child-to-root",
+                   "root-to-child", "explicit-parent", "unknown-role", "null-role",
+                   "no-role-evidence", "legacy-child", "legacy-root", "control")
+        for change in changes:
+            with self.subTest(change=change):
+                original_root = change in ("root-to-child", "no-role-evidence", "legacy-root")
+                fixture = child_fixture(self.root / change, as_root=original_root)
+                self.assertIn("hookSpecificOutput", fixture["start"])
+                change_child_identity(fixture, change)
+                payload = {**fixture["payload"], "hook_event_name": "Stop"}
+                self.assertIn("systemMessage", handle(payload, fixture["data"],
+                              home=fixture["home"], wall=1001, monotonic=1001))
+                directory = fixture["data"] / "auto-reports"
+                receipt = json.loads((directory / (fixture["key"] + ".json")).read_text())
+                self.assertEqual(receipt["scope"], "user_turn_stop_boundary" if
+                                 original_root else "agent_turn_stop_boundary")
+                if change in ("control", "legacy-child", "legacy-root"):
+                    self.assertTrue(receipt["source_identity_verified"])
+                    self.assertEqual(receipt["usage"]["total"], 100)
+                    self.assertEqual(receipt["task_usage"]["total"], 200)
+                    self.assertEqual(receipt["task"]["parent_hash"], None if original_root else
+                                     stable_hash(fixture["parent"]))
+                    continue
+                self.assertFalse(receipt["source_identity_verified"])
+                self.assertEqual(receipt["usage_status"], "source_identity_unavailable")
+                self.assertIsNone(receipt["usage"])
+                self.assertIsNone(receipt["task_usage"])
+                self.assertIsNone(receipt["task"])
+                self.assertEqual(receipt["stop_contexts"], [])
+                self.assertTrue(receipt["contexts_limited"])
+                self.assertFalse(receipt["subagents_included"])
+                self.assertEqual(receipt["subagents"]["status"], "unavailable")
+                for extension in ("json", "md", "html"):
+                    content = (directory / (fixture["key"] + "." + extension)).read_text()
+                    self.assertNotIn("synthetic-foreign-model", content)
+                    self.assertNotIn("98,700", content)
 
     def test_context_is_exact_turn_unknown_fast_not_false_and_safe(self):
         self.start()

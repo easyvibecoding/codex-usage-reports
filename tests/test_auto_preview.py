@@ -26,7 +26,12 @@ from codex_usage_reports.task_report import (  # noqa: E402
     render_task_report,
 )
 from codex_usage_reports.util import stable_hash  # noqa: E402
-from test_auto_report import counter, native_counter  # noqa: E402
+from test_auto_report import (  # noqa: E402
+    change_child_identity,
+    child_fixture,
+    counter,
+    native_counter,
+)
 
 TASK = "00000000-0000-7000-8000-000000000001"
 
@@ -74,6 +79,42 @@ class AutoPreviewTest(unittest.TestCase):
 
     def preview(self, **extra):
         return preview(self.data, TASK, "turn-1", output_dir=self.output, home=self.root, **extra)
+
+    def test_child_preview_checks_original_lineage_and_role_before_reading_observations(self):
+        changes = ("missing-root", "wrong-root", "missing-parent", "wrong-parent",
+                   "wrong-task", "changed-root", "changed-parent", "child-to-root",
+                   "root-to-child", "explicit-parent", "unknown-role", "null-role",
+                   "no-role-evidence", "legacy-child", "legacy-root", "control")
+        for change in changes:
+            with self.subTest(change=change):
+                fixture = child_fixture(self.root / change, as_root=change in (
+                    "root-to-child", "no-role-evidence", "legacy-root"))
+                self.assertIn("hookSpecificOutput", fixture["start"])
+                change_child_identity(fixture, change)
+                output = fixture["workspace"] / "visuals"
+                result = preview(fixture["data"], fixture["child"], fixture["turn"],
+                                 output_dir=output, home=fixture["home"])
+                if change in ("control", "legacy-child", "legacy-root"):
+                    self.assertEqual(result["status"], "preview")
+                    card = next(output.glob("*.html")).read_text()
+                    self.assertIn('data-metric="task-total">200</dd>', card)
+                    self.assertIn('data-metric="turn-delta">+100</dd>', card)
+                    if change != "legacy-root":
+                        self.assertIn("@" + stable_hash(fixture["child"])[:12], card)
+                        self.assertIn("Synthetic direct &lt;parent&gt;", card)
+                    continue
+                self.assertEqual(result["status"], "source_unavailable")
+                self.assertFalse(output.exists())
+                with patch("codex_usage_reports.auto_preview.snapshot") as observed, patch(
+                    "codex_usage_reports.auto_preview.collect"
+                ) as children, patch("codex_usage_reports.turn_quota.observe") as quota, patch(
+                    "codex_usage_reports.auto_preview.render_card"
+                ) as renderer:
+                    result = preview(fixture["data"], fixture["child"], fixture["turn"],
+                                     output_dir=output, home=fixture["home"])
+                self.assertEqual(result["status"], "source_unavailable")
+                for callable in (observed, children, quota, renderer):
+                    callable.assert_not_called()
 
     def test_inline_reference_real_snapshot_escaped_private_and_no_state_change(self):
         before = recent(self.data)

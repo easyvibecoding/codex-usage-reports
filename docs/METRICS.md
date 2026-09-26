@@ -38,6 +38,21 @@ and `agent_turn_completion_boundary` for a later, explicitly completed revision.
 The child receipt's `task.parent_hash` identifies verified lineage without turning
 its usage into the parent's own counter.
 
+Timing baselines retain the original Task role and hashes of the root and direct
+parent. Preview, Stop and completion reconciliation require that original
+identity; a current catalog lookup cannot replace missing historical evidence.
+Child cards and receipts label their own usage and settings separately from
+their descendants and show the verified direct parent.
+
+Contradictory parent metadata for the same child revokes its saved request
+evidence. A durable hashed revocation also excludes delayed and later matching
+scans, including when no request was stored before the conflict. There is no
+trusted generation signal to restore that identity automatically; a new child
+identity is independent. Ordinary copied-parent metadata for different Tasks
+remains valid. Revocation storage is bounded without dropping exclusion
+evidence; unreadable or saturated state leaves coverage partial or unavailable,
+never an observed zero. Reporting failures do not block tools or change budgets.
+
 ## Read the status as well as the number
 
 Native request records (`token_usage_record`) and legacy `token_count` events

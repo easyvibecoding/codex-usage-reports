@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 — 2026-09-26
+
+- Revoke previously cached descendant usage when native parent metadata conflicts. Persist a bounded, hashed child revocation and reject delayed scans atomically so later writes cannot restore that usage.
+- Require the original Task role, root and direct parent across preview, Stop and completion reconciliation; current catalog data cannot fill missing historical identity evidence.
+- Use child-specific own-usage, settings and descendant labels in cards and Markdown/HTML receipts across all nine report languages, with the same direct parent and hashed selector.
+- Preserve the independent report-only runtime and existing hook definitions. An ordinary matching scan cannot clear a revoked child identity; unreadable or saturated revocation state stays partial or unavailable.
+
 ## 0.7.0 — 2026-09-26
 
 - Add `SubagentStart` support so a subagent can use its own Task and turn IDs for a pre-final card and `agent_turn_stop_boundary` receipt; explicit completion can publish a separate `agent_turn_completion_boundary` revision.

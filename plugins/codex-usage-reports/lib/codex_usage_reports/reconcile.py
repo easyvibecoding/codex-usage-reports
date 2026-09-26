@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .auto_report import (
+    _baseline_identity_matches,
     _child_lineage,
     _connect,
     _delta,
@@ -216,13 +217,21 @@ def run(payload: dict, root: Path, *, home=None, delays=DELAYS) -> dict:
         if (original.get("task_hash") != row["session_hash"]
                 or original.get("turn_hash") != row["turn_hash"]
                 or not original.get("source_identity_verified")
+                or original.get("scope") != ("agent_turn_stop_boundary" if lineage
+                                              else "user_turn_stop_boundary")
                 or (lineage and (
-                    original.get("scope") != "agent_turn_stop_boundary"
-                    or original.get("root_hash") != stable_hash(session)
+                    original.get("root_hash") != stable_hash(session)
                     or original.get("direct_parent_hash") !=
                     stable_hash(lineage["parent_id"])))):
             raise ValueError("receipt identity unavailable")
         baseline = json.loads(row["baseline"])
+        if not _baseline_identity_matches(
+            baseline, row["session_hash"],
+            root_hash=stable_hash(session) if lineage else None,
+            direct_parent_hash=stable_hash(lineage["parent_id"]) if lineage else None,
+        ):
+            # A valid Stop receipt cannot supply the missing identity of Start.
+            raise ValueError("baseline identity unavailable")
         until = datetime.fromisoformat(original["stopped_at"]).timestamp()
         deadline = time.monotonic() + 25
         state = "expired"

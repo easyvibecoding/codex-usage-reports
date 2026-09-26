@@ -242,6 +242,53 @@ class ReconcileTest(unittest.TestCase):
             self.assertNotIn(private, original_path.read_text())
             self.assertNotIn(private, json.dumps(revised))
 
+    def test_child_completion_requires_start_identity_even_with_valid_stop_receipt(self):
+        changes = ("missing-root", "wrong-root", "missing-parent", "wrong-parent",
+                   "wrong-task", "changed-root", "changed-parent", "child-to-root",
+                   "root-to-child", "explicit-parent", "unknown-role", "null-role",
+                   "no-role-evidence", "legacy-child", "legacy-root", "control")
+        for change in changes:
+            with self.subTest(change=change):
+                fixture = fixtures.child_fixture(self.root / change,
+                                                 as_root=change in ("root-to-child",
+                                                 "no-role-evidence", "legacy-root"))
+                self.assertIn("hookSpecificOutput", fixture["start"])
+                stop = {**fixture["payload"], "hook_event_name": "Stop"}
+                self.assertIn("systemMessage", handle(stop, fixture["data"],
+                              home=fixture["home"], wall=1001, monotonic=1001))
+                directory = fixture["data"] / "auto-reports"
+                original = {extension: (directory / (fixture["key"] + "." + extension)).read_bytes()
+                            for extension in ("json", "md", "html")}
+                self.assertTrue(json.loads(original["json"])["source_identity_verified"])
+                fixtures.change_child_identity(fixture, change)
+                stop = {**fixture["payload"], "hook_event_name": "Stop"}
+                with patch("codex_usage_reports.reconcile.subprocess.Popen", return_value=Mock()):
+                    self.assertTrue(schedule(stop, fixture["data"], home=fixture["home"]))
+                with fixture["path"].open("a") as stream:
+                    if change != "child-to-root":
+                        stream.write(json.dumps(fixtures.counter(300)) + "\n")
+                    stream.write(json.dumps({"type": "event_msg", "timestamp":
+                        "2026-01-01T00:00:02+00:00", "payload": {
+                            "type": "task_complete", "turn_id": fixture["turn"],
+                            "thread_id": fixture["child"], "session_id": stop["session_id"]
+                        }}) + "\n")
+                result = run(stop, fixture["data"], home=fixture["home"], delays=(0,))
+                if change in ("control", "legacy-child", "legacy-root"):
+                    self.assertEqual(result["status"], "complete")
+                    revised = json.loads((directory / (fixture["key"] +
+                                                       ".reconciled.json")).read_text())
+                    self.assertEqual(revised["scope"], "user_turn_completion_boundary" if
+                                     change == "legacy-root" else "agent_turn_completion_boundary")
+                    self.assertEqual(revised["usage"]["total"], 200)
+                    self.assertEqual(revised["task_usage"]["total"], 300)
+                else:
+                    self.assertEqual(result, {"status": "failed", "attempts": 0})
+                    self.assertEqual(list(directory.glob("*.reconciled.*")), [])
+                    self.assertEqual(recent(fixture["data"])[0]["report"], fixture["key"] + ".md")
+                for extension, content in original.items():
+                    self.assertEqual((directory / (fixture["key"] + "." + extension)).read_bytes(),
+                                     content)
+
     def test_timeout_leaves_stop_report_available(self):
         self.stopped()
         self.queued()

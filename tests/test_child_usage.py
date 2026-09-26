@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "plugins/codex-usage-reports/lib"))
@@ -16,6 +17,9 @@ from codex_usage_reports.child_usage import (  # noqa: E402
     DB_NAME,
     HEADER_BYTES,
     TAIL_BYTES,
+    _load_cache,
+    _save_scan,
+    _scan,
     capture,
     collect,
 )
@@ -563,6 +567,290 @@ class ChildUsageTest(unittest.TestCase):
         result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
         self.assertEqual(result["status"], "partial")
         self.assertTrue(any(row["status"] == "partial" for row in result["rows"]))
+
+
+    def test_conflicting_parent_metadata_rejects_native_requests_in_both_orders(self) -> None:
+        for index, (matching_first, capture_first) in enumerate(
+            ((True, False), (False, False), (True, True), (False, True)), start=1
+        ):
+            with self.subTest(matching_first=matching_first, capture_first=capture_first):
+                child = synthetic_child(index)
+                parents = (PARENT, UNRELATED) if matching_first else (UNRELATED, PARENT)
+                path = self._page(
+                    child,
+                    PARENT,
+                    [metadata(child, parents[0]), metadata(child, parents[1], 1),
+                     request(child, f"conflicting-{index}", 10, 23), complete(11)],
+                    name=f"conflicting-{index}",
+                )
+                if capture_first:
+                    self._stop(child, path)
+
+                result = collect(
+                    self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home
+                )
+
+                self.assertIsNone(result["usage"])
+                self.assertEqual(result["status"], "unavailable")
+                self.assertEqual(result["request_count"], 0)
+                self.assertEqual(result["agents_with_usage"], 0)
+                self.assertEqual(result["missing_agents"], index)
+                self.assertTrue(all(row["usage"] is None for row in result["rows"]))
+
+
+    def test_parent_metadata_conflict_invalidates_cached_native_requests(self) -> None:
+        records = [metadata(CHILD_A, PARENT), request(CHILD_A, "cached", 10, 23), complete(11)]
+        path = self._page(CHILD_A, PARENT, records, name="A")
+        self._stop(CHILD_A, path)
+        before = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertEqual(before["usage"]["total"], 23)
+
+        with path.open("a") as output:
+            output.write(json.dumps(metadata(CHILD_A, UNRELATED, 12)) + "\n")
+        after = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertIsNone(after["usage"])
+        self.assertEqual(after["status"], "partial")
+        self.assertEqual(after["request_count"], 0)
+        self.assertEqual(after["missing_agents"], 1)
+
+        # A later unreadable source cannot resurrect receipts already known
+        # to have contradictory attribution.
+        self._stop(CHILD_A, path)
+        path.unlink()
+        cached = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertIsNone(cached["usage"])
+        self.assertEqual(cached["status"], "partial")
+        self.assertEqual(cached["request_count"], 0)
+
+
+    def test_stop_parent_metadata_conflict_revokes_cache_before_source_disappears(self) -> None:
+        path = self._page(
+            CHILD_A, PARENT,
+            [metadata(CHILD_A, PARENT), request(CHILD_A, "cached", 10, 23), complete(11)],
+            name="A",
+        )
+        self._stop(CHILD_A, path)
+        with path.open("a") as output:
+            output.write(json.dumps(metadata(CHILD_A, UNRELATED, 12)) + "\n")
+        self._stop(CHILD_A, path)
+        path.unlink()
+
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertIsNone(result["usage"])
+        self.assertEqual(result["status"], "partial")
+        self.assertEqual(result["request_count"], 0)
+
+
+    def test_revocation_rejects_delayed_and_later_normal_scans_after_reopen(self) -> None:
+        records = [metadata(CHILD_A, PARENT), request(CHILD_A, "first", 10, 23)]
+        path = self._page(CHILD_A, PARENT, records, name="A")
+        self._stop(CHILD_A, path)
+        records += [request(CHILD_A, "delayed", 11, 7), complete(12)]
+        path.write_text("".join(json.dumps(row) + "\n" for row in records))
+        delayed_scan = _scan(str(path), expected_child=CHILD_A, expected_parent=PARENT)
+
+        with path.open("a") as output:
+            output.write(json.dumps(metadata(CHILD_A, UNRELATED, 13)) + "\n")
+        self._stop(CHILD_A, path)
+        _save_scan(
+            self.root, delayed_scan, parent_hash=stable_hash(PARENT),
+            agent_hash=stable_hash(CHILD_A), now=WINDOW_START + 14,
+        )
+        # A normal-looking later file is not proof that the old lineage
+        # dispute has been resolved, even when the request id is new.
+        path.write_text("".join(json.dumps(row) + "\n" for row in (
+            metadata(CHILD_A, PARENT), request(CHILD_A, "after-conflict", 15, 9), complete(16)
+        )))
+        self._stop(CHILD_A, path)
+        path.unlink()
+
+        with sqlite3.connect(self.root / DB_NAME) as reopened:
+            self.assertEqual(reopened.execute(
+                "SELECT count(*) FROM requests WHERE child_hash=? AND conflict=0",
+                (stable_hash(CHILD_A),),
+            ).fetchone()[0], 0)
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertIsNone(result["usage"])
+        self.assertEqual(result["status"], "partial")
+        self.assertEqual(result["request_count"], 0)
+
+
+    def test_revocation_without_existing_agent_or_requests_survives_reopen(self) -> None:
+        path = self._page(
+            CHILD_A, PARENT,
+            [metadata(CHILD_A, PARENT), request(CHILD_A, "delayed", 10, 7), complete(11)],
+            name="A",
+        )
+        delayed_scan = _scan(str(path), expected_child=CHILD_A, expected_parent=PARENT)
+        path.write_text("".join(json.dumps(row) + "\n" for row in (
+            metadata(CHILD_A, PARENT), metadata(CHILD_A, UNRELATED, 1)
+        )))
+        self._stop(CHILD_A, path)
+        _save_scan(
+            self.root, delayed_scan, parent_hash=stable_hash(PARENT),
+            agent_hash=stable_hash(CHILD_A), now=WINDOW_START + 12,
+        )
+        path.unlink()
+        with sqlite3.connect(self.root / DB_NAME) as reopened:
+            self.assertEqual(reopened.execute("SELECT count(*) FROM requests").fetchone()[0], 0)
+            self.assertEqual(reopened.execute("SELECT count(*) FROM agents").fetchone()[0], 0)
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertIsNone(result["usage"])
+        self.assertEqual(result["status"], "unavailable")
+
+
+    def test_collect_rechecks_revocation_after_cache_load_and_fresh_scan(self) -> None:
+        for phase in ("after-cache", "after-scan"):
+            with self.subTest(phase=phase):
+                data_root = self.root / phase
+                records = [metadata(CHILD_A, PARENT), request(CHILD_A, "first", 10, 23)]
+                if phase == "after-cache":
+                    path = self._page(CHILD_A, PARENT, records, name="A")
+                else:
+                    path = self.paths[CHILD_A]
+                    path.write_text("".join(json.dumps(row) + "\n" for row in records))
+                original = _scan(str(path), expected_child=CHILD_A, expected_parent=PARENT)
+                _save_scan(
+                    data_root, original, parent_hash=stable_hash(PARENT),
+                    agent_hash=stable_hash(CHILD_A), now=WINDOW_START + 11,
+                )
+                with path.open("a") as output:
+                    output.write(json.dumps(metadata(CHILD_A, UNRELATED, 12)) + "\n")
+                conflict = _scan(str(path), expected_child=CHILD_A, expected_parent=PARENT)
+                path.write_text("".join(json.dumps(row) + "\n" for row in (
+                    *records, request(CHILD_A, "delayed", 13, 7), complete(14)
+                )))
+
+                def revoke() -> None:
+                    _save_scan(
+                        data_root, conflict, parent_hash=stable_hash(PARENT),
+                        agent_hash=stable_hash(CHILD_A), now=WINDOW_START + 15,
+                    )
+
+                def load_then_revoke(*args, **kwargs):
+                    loaded = _load_cache(*args, **kwargs)
+                    revoke()
+                    path.unlink()
+                    return loaded
+
+                def scan_then_revoke(*args, **kwargs):
+                    scanned = _scan(*args, **kwargs)
+                    revoke()
+                    return scanned
+
+                target, replacement = (
+                    ("_load_cache", load_then_revoke) if phase == "after-cache"
+                    else ("_scan", scan_then_revoke)
+                )
+                with mock.patch(
+                    f"codex_usage_reports.child_usage.{target}", side_effect=replacement
+                ):
+                    result = collect(
+                        data_root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home
+                    )
+                self.assertIsNone(result["usage"])
+                self.assertEqual(result["status"], "partial")
+                self.assertEqual(result["request_count"], 0)
+
+
+    def test_revoked_child_does_not_reject_a_new_child_hash(self) -> None:
+        revoked = self._page(
+            CHILD_A, PARENT,
+            [metadata(CHILD_A, PARENT), metadata(CHILD_A, UNRELATED, 1)], name="revoked",
+        )
+        self._stop(CHILD_A, revoked)
+        fresh = self._page(
+            CHILD_B, PARENT,
+            [metadata(CHILD_B, PARENT), request(CHILD_B, "fresh", 10, 23), complete(11)],
+            name="fresh",
+        )
+        self._stop(CHILD_B, fresh)
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertEqual(result["usage"]["total"], 23)
+        self.assertEqual(result["status"], "partial")
+        self.assertEqual(result["agents_with_usage"], 1)
+        self.assertEqual(result["missing_agents"], 1)
+
+
+    def test_revocation_capacity_is_bounded_without_forgetting_rejection(self) -> None:
+        fresh = self._page(
+            GRANDCHILD, PARENT,
+            [metadata(GRANDCHILD, PARENT), request(GRANDCHILD, "fresh", 10, 23), complete(11)],
+            name="fresh",
+        )
+        self._stop(GRANDCHILD, fresh)
+        with mock.patch("codex_usage_reports.child_usage.MAX_DB_AGENTS", 1):
+            for child in (CHILD_A, CHILD_B):
+                path = self._page(
+                    child, PARENT,
+                    [metadata(child, PARENT), metadata(child, UNRELATED, 1)], name="revoked",
+                )
+                self._stop(child, path)
+        with sqlite3.connect(self.root / DB_NAME) as reopened:
+            rows = reopened.execute("SELECT child_hash FROM child_revocations").fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertIn(("*",), rows)
+        self.assertIn((stable_hash(CHILD_A),), rows)
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertIsNone(result["usage"])
+        self.assertEqual(result["status"], "partial")
+        self.assertEqual(result["request_count"], 0)
+
+
+    def test_cache_without_revocation_table_is_upgraded_without_losing_usage(self) -> None:
+        path = self._page(
+            CHILD_A, PARENT,
+            [metadata(CHILD_A, PARENT), request(CHILD_A, "legacy", 10, 23), complete(11)],
+            name="A",
+        )
+        self._stop(CHILD_A, path)
+        with sqlite3.connect(self.root / DB_NAME) as legacy:
+            legacy.execute("DROP TABLE child_revocations")
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertEqual(result["usage"]["total"], 23)
+        self.assertEqual(result["status"], "observed")
+        with sqlite3.connect(self.root / DB_NAME) as upgraded:
+            self.assertEqual(upgraded.execute(
+                "SELECT count(*) FROM child_revocations"
+            ).fetchone()[0], 0)
+
+
+    def test_unreadable_revocation_gate_cannot_count_live_or_cached_usage(self) -> None:
+        path = self._page(
+            CHILD_A, PARENT,
+            [metadata(CHILD_A, PARENT), request(CHILD_A, "cached", 10, 23), complete(11)],
+            name="A",
+        )
+        self._stop(CHILD_A, path)
+        with sqlite3.connect(self.root / DB_NAME) as broken:
+            broken.execute("ALTER TABLE child_revocations RENAME COLUMN child_hash TO unexpected")
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertIsNone(result["usage"])
+        self.assertEqual(result["status"], "partial")
+        self.assertEqual(result["request_count"], 0)
+
+
+    def test_fork_copied_parent_metadata_preserves_child_attribution(self) -> None:
+        path = self._page(
+            CHILD_A,
+            PARENT,
+            [
+                {"type": "session_meta", "timestamp": stamp(0),
+                 "payload": {"id": PARENT, "source": "vscode"}},
+                request(PARENT, "parent-copy", 1, 900),
+                complete(2, identifier=PARENT),
+                metadata(CHILD_A, PARENT, 3),
+                request(CHILD_A, "child", 10, 23),
+                complete(11, identifier=CHILD_A),
+            ],
+            name="A",
+        )
+        self._stop(CHILD_A, path)
+        result = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20, home=self.home)
+        self.assertEqual(result["status"], "observed")
+        self.assertEqual(result["usage"]["total"], 23)
+        self.assertEqual(result["request_count"], 1)
+
 
 
 if __name__ == "__main__":

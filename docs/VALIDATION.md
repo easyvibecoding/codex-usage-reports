@@ -6,6 +6,40 @@ declared in [pyproject.toml](../pyproject.toml) and the plugin manifest; see the
 canaries do not prove the status of a current installation. The commands near
 the end reproduce the repository checks on the current checkout.
 
+## 0.7.1 child identity, cache revocation and labels
+
+Checked on 2026-09-26. Ruff, all 247 tests, repository and plugin validation,
+the 25-file documentation check and signed-release verification passed.
+The final signed runtime has sequence `1790392061` and SHA-256
+`2c97261461c7afcb3a6e69f1cabb8f7b63ad4f7af1e211a632d0975f988614a5`.
+
+Real SQLite regressions cover delayed request writes after revocation, conflicts
+before any cached request, reopen/source removal, collection interleavings,
+legacy schemas, bounded saturation and a broken revocation schema. Independent
+checks inserted an otherwise valid request as an older runtime would: the new
+collector still excluded the revoked child. Original Task/root/direct-parent
+and role checks reject drift and contradictory explicit roles at preview, Stop
+and completion; supported legacy baselines remain usable. Failed completion
+checks leave the original Stop files unchanged. Nine-language rendering tests
+cover child labels, selectors and escaped parent names, with unchanged root text.
+
+A fresh disposable Codex home installed this exact 0.7.1 runtime. All nine hook
+definitions matched 0.7.0; only the isolated fixture received its previously
+reviewed hashes. Native read-back showed nine enabled/trusted hooks. A real
+`codex exec` spawned one child and exited successfully. Both emitted preview
+references; the child's card used child-specific usage/settings labels and
+showed its direct parent. Two Stop receipts and two completion revisions were
+written. The child baseline's original root/direct-parent hashes matched native
+lineage, and its selector matched the parent descendant row. The child observed
+52,300 own-turn tokens; the parent observed 61,640 of its own and 52,300 separately
+as descendant usage. Receipts contained no raw native Task UUIDs. Temporary
+authentication material was removed after the run.
+
+The active user installation and hook grants were not changed by this check.
+This proves isolated CLI hook execution and generated child-card content;
+Desktop painting remains unobserved. Token totals are canary observations,
+not plugin overhead or account billing.
+
 ## 0.7.0 child-agent hook and isolated native canary
 
 Checked on 2026-09-26 with Codex CLI 0.157.1. Ruff, 229 tests, repository
