@@ -33,7 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .task_catalog import TaskCatalog, _uuid
+from .task_catalog import MAX_DEPTH, TaskCatalog, _uuid
 from .transcript import request_usage
 from .util import stable_hash
 
@@ -310,6 +310,7 @@ def _scan(
     child_id = expected_child
     parent_id = expected_parent
     matched_metadata = False
+    metadata_conflict = False
     active_thread: str | None = None
     child_turns: set[str] = set()
     observations: dict[str, dict[str, Any]] = {}
@@ -320,11 +321,18 @@ def _scan(
         payload_type = payload.get("type")
         if record_type == "session_meta":
             candidate, candidate_parent = _metadata(payload)
+            raw_id = _bounded_text(payload.get("id"))
+            if (
+                expected_child is not None
+                and raw_id == expected_child
+                and expected_parent is not None
+                and candidate_parent != expected_parent
+            ):
+                metadata_conflict = True
             if candidate is not None and candidate_parent is not None:
                 if expected_child is None or candidate == expected_child:
                     if expected_parent is None or candidate_parent == expected_parent:
                         child_id, parent_id, matched_metadata = candidate, candidate_parent, True
-            raw_id = _bounded_text(payload.get("id"))
             active_thread = raw_id
         if record_type != "token_usage_record":
             if record_type == "event_msg" and payload_type in (
@@ -410,6 +418,8 @@ def _scan(
             or prior["stamp"] != item["stamp"]
         ):
             prior["conflict"] = True
+    matched_metadata &= not metadata_conflict
+    result["identity_ambiguous"] |= metadata_conflict
     result["child_id"] = child_id if matched_metadata else None
     result["parent_id"] = parent_id if matched_metadata else None
     result["requests"] = list(observations.values())
@@ -617,18 +627,23 @@ def capture(payload: dict, root: Path, *, home=None, now=None) -> None:
     try:
         if not isinstance(payload, dict) or payload.get("hook_event_name") != "SubagentStop":
             return None
-        parent = _bounded_text(payload.get("session_id"))
-        if parent is None:
+        # Native SubagentStop uses the session-tree root for every descendant,
+        # including nested agents.  The direct parent must come from the
+        # catalog; a matching timestamp or working directory is not lineage.
+        agent_id = _uuid(payload.get("agent_id"))
+        lineage = _hook_lineage(agent_id, payload.get("session_id"), home)
+        if lineage is None:
             return None
+        parent, catalog_path = lineage
         parent_hash = stable_hash(parent)
-        agent_hash = _hash(payload.get("agent_id"))
+        agent_hash = _hash(agent_id)
         stamp = _stamp(now) if now is not None else time.time()
         if stamp is None:
             stamp = time.time()
         path = payload.get("agent_transcript_path")
         if not _bounded_text(path):
-            path = _agent_path(payload.get("agent_id"), parent, home)
-        expected_child = payload.get("agent_id") if _uuid(payload.get("agent_id")) else None
+            path = catalog_path
+        expected_child = agent_id
         scan = (
             _scan(path, expected_child=expected_child, expected_parent=parent)
             if _bounded_text(path)
@@ -698,17 +713,33 @@ def _paths(catalog: TaskCatalog, rows: list[dict[str, Any]]) -> dict[str, str]:
         return {}
 
 
-def _agent_path(agent_id: Any, parent_id: str, home=None) -> str | None:
-    """Resolve an agent UUID only when native lineage proves it is a child."""
+def _hook_lineage(agent_id: Any, root_id: Any, home=None) -> tuple[str, str | None] | None:
+    """Prove the agent's direct parent and ancestry up to the hook root."""
 
-    if _uuid(agent_id) is None:
+    child_id, root_id = _uuid(agent_id), _uuid(root_id)
+    if child_id is None or root_id is None or child_id == root_id:
         return None
     try:
         with TaskCatalog(home) as catalog:
-            row = catalog.get(agent_id)
-            if row.get("role") != "subagent" or row.get("parent_id") != parent_id:
+            row = catalog.get(child_id)
+            direct_parent = row.get("parent_id")
+            if row.get("role") != "subagent" or direct_parent is None:
                 return None
-            return _paths(catalog, [row]).get(row["id"])
+            current, seen = row, {child_id}
+            for _ in range(MAX_DEPTH):
+                parent_id = current.get("parent_id")
+                if parent_id is None or parent_id in seen:
+                    return None
+                parent = catalog.get(parent_id)
+                if parent_id == root_id:
+                    if parent.get("role") != "parent" or parent.get("parent_id") is not None:
+                        return None
+                    return direct_parent, _paths(catalog, [row]).get(child_id)
+                if parent.get("role") != "subagent":
+                    return None
+                seen.add(parent_id)
+                current = parent
+            return None
     except (OSError, sqlite3.Error, TypeError, ValueError):
         return None
 
@@ -1147,6 +1178,7 @@ def collect(root: Path, session: str, since: float, until: float, *, home=None,
             rows_out.append(
                 {
                     "display_name": description.get("display_name") or unnamed_label,
+                    "selector": description.get("selector") or child_hash[:12],
                     "parent_name": description.get("parent_name"),
                     "usage": child_subtotal,
                     "status": status,

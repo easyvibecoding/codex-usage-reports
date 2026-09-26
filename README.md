@@ -25,8 +25,8 @@ Requires Python 3.10+ and a local Codex host with plugin hooks. Inline cards als
    codex plugin add codex-usage-reports@codex-usage-reports
    ```
 
-2. In the Codex CLI, open `/hooks`, review and trust the installed definitions, then start a **new Task**. An enabled plugin with untrusted or modified hooks does not run those hooks. See the [plugin](https://learn.chatgpt.com/docs/plugins) and [hook](https://learn.chatgpt.com/docs/hooks) guides.
-3. Work normally. The plugin is enabled by default. It can show one pre-final card and save separate local Stop receipts. Ask the bundled `usage-report` skill: “Show the usage report for this Task.”
+2. In the Codex CLI, open `/hooks`, review and trust every changed or untrusted installed definition, including `SubagentStart`, then start a **new Task**. An enabled plugin with untrusted or modified hooks does not run those hooks. See the [plugin](https://learn.chatgpt.com/docs/plugins) and [hook](https://learn.chatgpt.com/docs/hooks) guides.
+3. Work normally. The plugin is enabled by default. Supported lifecycle events can give the parent and each subagent their own pre-final card and local turn receipt. Ask the bundled `usage-report` skill: “Show the usage report for this Task.”
 
 To inspect a selected Task directly from a checkout:
 
@@ -41,15 +41,15 @@ Set `TASK_ID` to the exact native Task ID. The [usage guide](docs/USAGE.md) cove
 
 | Scope | Observation |
 | --- | --- |
-| Selected parent Task | Latest observed cumulative token counter and this plugin's recorded turn receipts. |
+| Selected Task | Its own latest observed cumulative token counter and this plugin's recorded turn receipts, whether parent or subagent. |
 | Current turn | Native turn counter, or a valid difference between counters from the same source. |
-| Child agents | Separate attributable subtotal with coverage status; never silently added to the parent counter. |
+| Descendant agents | Separate attributable subtotal with coverage status in a parent Task report; never silently added to its native counter. |
 | Model context | Model and reasoning effort observed during each turn, including visible changes. |
 | Cache | Cached input as part of input, plus cache-read share when the input denominator is observed and nonzero. |
 | Account quota | Native account observation when available, separate from Task usage. |
 | Receipts | Private HTML, Markdown, and JSON; a fresh Task query selects the latest published revision. |
 
-A card is a **pre-final snapshot**. After Stop, one bounded local worker can publish a separate completion revision when the exact turn's native `task_complete` record appears. It preserves the original Stop files and never rewrites a card already shown in chat. Missing counters, resets, conflicting settings, and incomplete child coverage remain unknown or partial. See [metrics](docs/METRICS.md) and [completion behavior](docs/ARCHITECTURE.md#completion-reconciliation).
+A card is a **pre-final snapshot** for the selected Task. After a supported terminal event (`Stop` or `SubagentStop`), one bounded local worker can publish a separate completion revision when that Task and turn's native `task_complete` record appears. It preserves the original receipt files and never rewrites a card already shown in chat. A subagent's own counter and receipt stay distinct from the parent's verified descendant subtotal. Match a child in the parent report to its own card or report by the same `@` selector, even when agents share a name. Missing hooks, counters, lineage, or incomplete coverage remain unknown or partial. See [metrics](docs/METRICS.md) and [completion behavior](docs/ARCHITECTURE.md#completion-reconciliation).
 
 The Python runtime uses the standard library. Reporting needs no API key, model call, or hosted analytics service. It does not calculate exact charges, enforce a budget, deny a tool, or stop work. This is the independent reporting extraction of [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget).
 

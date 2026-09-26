@@ -31,8 +31,12 @@ last-turn events do not prove process liveness. Missing or capped data stays
 unknown/partial. Hooks report new sessions at tool-return boundaries, not while
 idle; no daemon or scheduled monitor is installed.
 
-Use the current native Task UUID from the task context, or one explicitly named
-by the user. If neither is available, ask for the Task ID. Never substitute an
+Use the selected parent or subagent's own native Task UUID from the task
+context, one explicitly named by the user, or an unambiguous listed hashed `@`
+selector from the parent report. The same selector appears on a verified child
+row and that child's card and report. In a subagent, use its own Task and turn
+IDs; the session ID may be shared with the parent and is not a child selector.
+If no exact Task ID or listed selector is available, ask for it. Never substitute an
 arbitrary recent Task, scan all session files, or guess a UUID from a title.
 
 From the plugin root:
@@ -53,12 +57,15 @@ an existing output. Use `--locale en`, `zh-Hant`, `zh-Hans`, `ja`, `ko`, `de`, `
 
 ## Automatic cards
 
-Automatic reports are enabled by default. One prompt or recovery tool hook adds
-one pre-final preview instruction. Follow that instruction once and emit its
+Automatic reports are enabled by default. Supported parent or subagent
+lifecycle hooks add one pre-final preview instruction for that Task. Follow
+that instruction once with the selected Task's own IDs and emit its
 visualize reference unchanged. Do not read or analyze the card merely to append
 it. Skip disabled reports and incompatible answer formats. Report errors never
-justify continuing a turn or retrying the model. Stop creates a separate final
-receipt; it does not rewrite an already presented pre-final card.
+justify continuing a turn or retrying the model. A supported terminal hook
+creates a separate receipt; it does not rewrite an already presented pre-final
+card. If the host does not deliver the required child hook or native record,
+report missing or partial coverage without reusing the parent's preview.
 
 The data directory is `CODEX_USAGE_REPORTS_HOME` or `~/.codex/usage-reports`.
 `CODEX_HOME` selects the native Codex catalog. These are independent directories.
@@ -66,10 +73,14 @@ Changing report settings does not change Codex account settings or other plugins
 
 ## Explain the evidence
 
-Keep Task cumulative observations separate from per-turn deltas and subagent
-subtotals. The Task table contains only this plugin's recorded receipts, so do not
+Keep the selected Task's own cumulative counter and turn deltas separate from
+its verified descendant subtotal. A subagent report uses that subagent's own
+counter and receipts. A parent report may show a separate descendant subtotal;
+do not add it to the parent's native counter. Native catalog lineage and
+compatible usage evidence are required for attribution. The Task table contains
+only this plugin's recorded receipts, so do not
 claim it reconstructs every historical turn. Missing counters stay unknown;
-resets, truncation, missing child data, and ambiguous context remain partial.
+resets, truncation, missing lineage or child data, and ambiguous context remain partial.
 Cached input and reasoning output are subsets, not extra tokens to add again.
 Use each turn's observed model and reasoning pairs; do not apply today's settings
 to older turns. Fast mode is omitted when it is not observable.
@@ -88,7 +99,8 @@ For update or missing-hook questions, run `python3 scripts/usage_reports.py upda
 from the selected installed plugin directory. Use the user's project for
 `PROJECT_DIR`. Keep release status and native hook trust separate; unknown does
 not mean current or trusted. The first-prompt notice has a six-hour version cache.
-Tell the user to run `codex` in a terminal, enter `/hooks`, and review/trust the
-updated hooks. Never edit trusted hashes or grant hook trust automatically.
+Tell the user to run `codex` in a terminal, enter `/hooks`, and review/trust
+every definition marked changed or untrusted, including `SubagentStart` after
+the updated plugin is installed. Never edit trusted hashes or grant hook trust automatically.
 The standalone reminder needs one initial trust review; if it is itself changed
 or disabled it cannot notify. No model run or repeated background check is needed.

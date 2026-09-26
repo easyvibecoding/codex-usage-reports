@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -700,6 +701,74 @@ class AutoReportTest(unittest.TestCase):
         self.meta["payload"]["source"] = {"subagent": {"thread_spawn": {}}}
         self.page.write_text(json.dumps(self.meta) + "\n")
         self.assertEqual(snapshot(str(self.page), "turn")["status"], "subagent")
+
+    def test_child_and_parent_receipts_drop_native_agent_path(self):
+        parent = "11111111-2222-4333-8444-555555555555"
+        child = "aaaaaaaa-1234-4234-8234-123456789abc"
+        parent_turn, child_turn = "parent-turn", "child-turn"
+        parent_agent_path = "/root/private_parent_route"
+        child_agent_path = "/root/private_child_route"
+        home = self.root / "native"
+        home.mkdir()
+        data = self.root / "path-sanitization-data"
+        parent_path = home / "parent.jsonl"
+        child_path = home / "child.jsonl"
+        source = {"subagent": {"thread_spawn": {"parent_thread_id": parent}}}
+        parent_path.write_text(json.dumps({"type": "session_meta", "payload": {
+            "id": parent}}) + "\n" + json.dumps(counter(1000)) + "\n")
+        child_path.write_text("".join(json.dumps(record) + "\n" for record in (
+            {"type": "session_meta", "payload": {"id": child, "source": source,
+                                                 "agent_path": child_agent_path}},
+            {"type": "event_msg", "payload": {"type": "task_started",
+                                               "turn_id": child_turn}},
+        )))
+        with sqlite3.connect(home / "state_5.sqlite") as database:
+            database.execute("CREATE TABLE threads (id TEXT,name TEXT,agent_nickname TEXT,"
+                             "agent_role TEXT,agent_path TEXT,source TEXT,rollout_path TEXT)")
+            database.execute("INSERT INTO threads VALUES (?,?,NULL,NULL,?,?,?)",
+                             (parent, "Parent Task", parent_agent_path, "vscode",
+                              str(parent_path)))
+            database.execute("INSERT INTO threads VALUES (?,?,NULL,NULL,?,?,?)",
+                             (child, "Child Task", child_agent_path, json.dumps(source),
+                              str(child_path)))
+        parent_payload = {"session_id": parent, "turn_id": parent_turn,
+                          "transcript_path": str(parent_path)}
+        child_payload = {"session_id": parent, "agent_id": child,
+                         "turn_id": child_turn, "transcript_path": str(child_path)}
+        self.assertIn("hookSpecificOutput", handle(
+            {**parent_payload, "hook_event_name": "UserPromptSubmit"}, data,
+            home=home, wall=1000, monotonic=1000,
+        ))
+        with parent_path.open("a") as stream:
+            stream.write(json.dumps(counter(1100)) + "\n")
+        self.assertIn("systemMessage", handle(
+            {**parent_payload, "hook_event_name": "Stop"}, data,
+            home=home, wall=1001, monotonic=1001,
+        ))
+        self.assertIn("hookSpecificOutput", handle(
+            {**child_payload, "hook_event_name": "SubagentStart"}, data,
+            home=home, wall=2000, monotonic=2000,
+        ))
+        with child_path.open("a") as stream:
+            stream.write(json.dumps(counter(150)) + "\n")
+        self.assertIn("systemMessage", handle(
+            {**child_payload, "hook_event_name": "SubagentStop",
+             "transcript_path": str(parent_path),
+             "agent_transcript_path": str(child_path)}, data,
+            home=home, wall=2001, monotonic=2001,
+        ))
+        for owner, turn, forbidden in (
+            (parent, parent_turn, parent_agent_path),
+            (child, child_turn, child_agent_path),
+        ):
+            receipt_path = data / "auto-reports" / (stable_hash([owner, turn]) + ".json")
+            raw = receipt_path.read_text()
+            receipt = json.loads(raw)
+            self.assertTrue(receipt["source_identity_verified"])
+            self.assertNotIn("agent_path", receipt["task"])
+            self.assertNotIn(forbidden, raw)
+            self.assertNotIn(owner, raw)
+            self.assertNotIn(str(child_path), raw)
 
     def test_concurrent_stops_publish_once(self):
         self.start()

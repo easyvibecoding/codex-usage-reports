@@ -2,7 +2,8 @@
 
 The external reporting seams are lifecycle JSON through the hook adapter,
 `build_task_report(...)` for one selected Task, and `preview(...)` for one
-running turn. CLI and hooks adapt their inputs to these interfaces. The optional
+running turn. A selected Task may be a parent or subagent. CLI and hooks adapt
+their inputs to these interfaces. The optional
 `exec-activity` CLI and prompt-time notices use a separate project-scoped
 observation path; the signed updater and package/trust checker are independent
 of report settlement. See the [documentation index](README.md).
@@ -13,7 +14,7 @@ flowchart LR
   A --> T[Turn baseline and settlement]
   N[Selected native Task records] --> T
   N --> P[Pre-final preview]
-  T --> R[Original Stop receipts]
+  T --> R[Original terminal receipts]
   T --> W[Bounded completion worker]
   N --> W
   W --> V[Completion revision]
@@ -27,7 +28,7 @@ flowchart LR
 
 - `auto_report`: bounded native observations, baselines, safe deltas, settlement.
 - `auto_preview`: output-root validation and immutable pre-final cards.
-- `reconcile`: one detached Python worker per reported Stop, bounded completion checks, and separate receipt revisions.
+- `reconcile`: one detached Python worker per reported `Stop` or `SubagentStop`, bounded completion checks, and separate receipt revisions.
 - `task_report`: current parent counter plus this plugin's recorded turn history.
 - `task_catalog` / `child_usage`: native identity, selected lineage, attribution.
 - `transcript`: native counter parsing.
@@ -48,11 +49,29 @@ Only observations within a source establish resets; boundary differences never
 cross sources. Invalid native records cannot silently fall back to an older
 valid observation. See [metrics](METRICS.md) for status semantics.
 
+`SubagentStart` supplies the subagent's own Task and turn identity for an active
+baseline; supported subagent events can then produce that Task's pre-final
+preview and terminal receipt. Parent and subagent counters and receipts remain
+separate. A parent report collects verified descendants independently through
+native catalog lineage and compatible usage records, including nested agents
+within bounded collection. It does not infer lineage from a shared session ID,
+display name, or hook timing. Incomplete lineage or bounded scans retain
+partial or unavailable coverage. After installation or update, every hook
+definition marked changed or untrusted in native `/hooks` requires review and
+trust, including `SubagentStart`; a signed runtime update does not grant it.
+Verified descendant rows and the child's own card, receipt, and selected Task
+report display the same short hashed `@` selector to make them comparable
+without storing a native Task ID in report state. Child receipt JSON uses
+`agent_turn_stop_boundary` and, after explicit completion, a separate
+`agent_turn_completion_boundary` revision. Verified lineage is retained as a
+hashed parent reference.
+
 ## Completion reconciliation
 
-`Stop` can arrive before the final native usage record is written. The initial
-receipt therefore describes what was observable at Stop; it does not prove that
-all final-answer usage was persisted. After a reported Stop, the hook schedules
+`Stop` or `SubagentStop` can arrive before the final native usage record is
+written. The initial receipt therefore describes what was observable at that
+terminal event; it does not prove that all final-answer usage was persisted.
+After a reported terminal event, the hook schedules
 at most one detached, report-only Python worker for that turn. The worker never
 calls a model, sends a follow-up message, or continues the Task.
 
@@ -60,13 +79,13 @@ The worker makes at most eight bounded native-record scans with a 25-second
 retry deadline. It requires the selected Task and turn's explicit `task_complete`
 boundary before publishing a revision. Parsing stops at that boundary so a later
 turn's counters and settings cannot be substituted. The child attribution window
-remains the original turn-start-to-Stop window even if the check runs later.
+remains the original turn-start-to-terminal-event window even if the check runs later.
 Counter resets, truncated scans, missing observations, and incomplete child
 coverage continue to produce partial or unavailable values.
 
 A verified completion produces revision 2 as separate
 `<hashed-turn-key>.reconciled.json`, `.reconciled.html`, and `.reconciled.md`
-files. Original Stop JSON, HTML, and Markdown receipts remain immutable; their
+files. Original terminal JSON, HTML, and Markdown receipts remain immutable; their
 files and links are not rewritten during reconciliation. After publication, the
 Task index selects the revised receipt for fresh selected-Task report queries.
 This also leaves any user edits to the original files untouched. `revision`,

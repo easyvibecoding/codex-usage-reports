@@ -10,7 +10,7 @@ from .auto_report import handle
 from .util import data_path
 
 MAX_INPUT_BYTES = 2 * 1024 * 1024
-EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "SubagentStop",
+EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "SubagentStart", "SubagentStop",
           "Stop", "SessionEnd", "Interrupt")
 
 

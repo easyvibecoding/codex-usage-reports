@@ -2,10 +2,10 @@
 
 | Field | Meaning |
 | --- | --- |
-| Task cumulative | Latest observed parent Task counter, across its turns. |
-| This-turn delta | Valid native turn counter; otherwise, a valid same-source current counter minus the turn baseline. |
-| Child subtotal | Observed child usage attributable to the selected interval. |
-| Observed combined subtotal | Parent turn usage plus available child usage; check coverage. |
+| Task cumulative | Latest observed native counter for the selected Task itself, across its turns. |
+| This-turn delta | Selected Task's valid native turn counter; otherwise, a valid same-source current counter minus its turn baseline. |
+| Descendant subtotal | Observed usage from verified descendant agents attributable to the selected interval. |
+| Observed combined subtotal | Selected Task's turn usage plus available descendant usage; check coverage. |
 | Input | Native input tokens, including cached input. |
 | Cached input | Subset of input, not an extra chargeable token count. |
 | Cache-read share | Cached input divided by observed input for the same displayed scope. Missing or zero input is unavailable, not 0%. |
@@ -15,6 +15,28 @@
 | Elapsed | Wall-clock turn time, including waiting; not model compute time. |
 | Account quota | A native account observation at capture time, not Task consumption. |
 | Recorded turn rows | Receipts written by this plugin; they are not a reconstruction of every historical native turn. |
+
+## Task and descendant scope
+
+A parent Task and each subagent have distinct native counters. A subagent's own
+Task report uses its own counter and recorded turn receipts. A parent Task report
+shows verified descendant usage separately; the descendant subtotal is not part
+of the parent's native cumulative counter. A combined subtotal is an observed
+sum for the stated interval, not a replacement for either native counter.
+
+Descendant attribution requires native lineage and compatible usage evidence.
+An agent's name, a shared session ID, a nearby timestamp, or a hook event alone
+does not establish parentage or complete coverage. Missing, conflicting, or
+bounded evidence leaves the descendant subtotal partial or unavailable. Where
+lineage is verified, a short hashed `@` selector appears on the descendant row
+and that subagent's own card and report so same-named agents can be matched.
+The selector identifies a Task within the selected native catalog; it is not
+a token counter or proof of complete usage.
+
+Child receipt JSON uses `agent_turn_stop_boundary` for the initial observation
+and `agent_turn_completion_boundary` for a later, explicitly completed revision.
+The child receipt's `task.parent_hash` identifies verified lineage without turning
+its usage into the parent's own counter.
 
 ## Read the status as well as the number
 

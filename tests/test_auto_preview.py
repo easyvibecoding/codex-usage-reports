@@ -14,7 +14,17 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "plugins/codex-usage-reports/lib"))
 
 from codex_usage_reports.auto_preview import preview, render_card  # noqa: E402
-from codex_usage_reports.auto_report import configure, handle, observed_total, recent  # noqa: E402
+from codex_usage_reports.auto_report import (  # noqa: E402
+    configure,
+    handle,
+    observed_total,
+    recent,
+    snapshot,
+)
+from codex_usage_reports.task_report import (  # noqa: E402
+    build_task_report,
+    render_task_report,
+)
 from codex_usage_reports.util import stable_hash  # noqa: E402
 from test_auto_report import counter, native_counter  # noqa: E402
 
@@ -281,6 +291,106 @@ class AutoPreviewTest(unittest.TestCase):
         self.assertEqual(receipt["subagents"]["usage"]["total"], 200)
         self.assertEqual(receipt["usage"]["total"], 500)
         self.assertEqual(next(self.output.glob("*.html")).read_text(), card)
+
+    def test_nested_subagent_has_own_preview_receipt_and_selected_task(self):
+        middle = "00000000-0000-7000-8000-000000000002"
+        child = "00000000-0000-7000-8000-000000000003"
+        turn = "child-own-turn"
+        middle_source = {"subagent": {"thread_spawn": {"parent_thread_id": TASK}}}
+        child_source = {"subagent": {"thread_spawn": {"parent_thread_id": middle}}}
+        middle_path = self.root / "middle.jsonl"
+        child_path = self.root / "child.jsonl"
+        middle_path.write_text(json.dumps({"type": "session_meta", "payload": {
+            "id": middle, "source": middle_source}}) + "\n")
+        child_path.write_text("".join(json.dumps(record) + "\n" for record in (
+            {"type": "session_meta", "payload": {"id": child, "source": child_source}},
+            {"type": "event_msg", "payload": {"type": "task_started", "turn_id": turn,
+                                               "thread_id": child, "session_id": TASK}},
+            {"type": "turn_context", "payload": {"turn_id": turn, "thread_id": child,
+                                               "session_id": TASK, "model": "gpt-6-sol"}},
+        )))
+        self.db.execute("INSERT INTO threads VALUES (?,?,NULL,NULL,NULL,?,?,?)",
+                        (middle, "Middle", json.dumps(middle_source), str(middle_path),
+                         str(self.workspace)))
+        self.db.execute("INSERT INTO threads VALUES (?,?,NULL,NULL,NULL,?,?,?)",
+                        (child, "Leaf <child>", json.dumps(child_source), str(child_path),
+                         str(self.workspace)))
+        self.db.commit()
+        start = {"hook_event_name": "SubagentStart", "session_id": TASK,
+                 "agent_id": child, "turn_id": turn, "transcript_path": str(child_path)}
+        self.assertIsNone(handle({**start, "session_id": middle}, self.data, home=self.root))
+        started = handle(start, self.data, home=self.root)
+        self.assertEqual(started["hookSpecificOutput"]["hookEventName"], "SubagentStart")
+        context = started["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("--preview " + child, context)
+        self.assertIn("skip inherited parent preview", context)
+        self.assertEqual(snapshot(str(child_path), turn)["status"], "subagent")
+        self.assertEqual(snapshot(str(child_path), turn, expected_child=child,
+                                  expected_parent=TASK, expected_root=TASK)["status"],
+                         "unavailable")
+        request = native_counter(child, turn, 120)
+        request["payload"].update(session_id=TASK, root_turn_id="root-own-turn")
+        request["timestamp"] = datetime.now(timezone.utc).isoformat()
+        with child_path.open("a") as stream:
+            stream.write(json.dumps(request) + "\n")
+            stream.write(json.dumps({"type": "event_msg", "payload": {
+                "type": "task_complete", "turn_id": turn, "thread_id": child,
+                "session_id": TASK, "root_turn_id": "root-own-turn"}}) + "\n")
+        # A nested agent may inherit the root Task's writable visualization root.
+        visual_root = self.root / "visualizations/1970/01/01" / TASK
+        result = preview(self.data, child, turn, output_dir=visual_root, home=self.root)
+        self.assertEqual(result["status"], "preview")
+        card = next(visual_root.glob("*.html")).read_text()
+        selector = stable_hash(child)[:12]
+        self.assertIn("@" + selector, card)
+        self.assertIn("Leaf &lt;child&gt;", card)
+        self.assertIn("此子代理", card)
+        self.assertIn('data-metric="task-total">120</dd>', card)
+        self.assertIn('data-metric="turn-delta">+120</dd>', card)
+        for private in (child, middle, TASK, str(child_path)):
+            self.assertNotIn(private, card)
+        stop = {**start, "hook_event_name": "SubagentStop",
+                "transcript_path": str(middle_path),
+                "agent_transcript_path": str(child_path)}
+        self.assertIn("systemMessage", handle(stop, self.data, home=self.root))
+        receipt = json.loads((self.data / "auto-reports" /
+                              (stable_hash([child, turn]) + ".json")).read_text())
+        self.assertEqual(receipt["scope"], "agent_turn_stop_boundary")
+        self.assertEqual(receipt["usage"]["total"], 120)
+        self.assertEqual(receipt["task"]["selector"], selector)
+        self.assertEqual(receipt["task"]["parent_hash"], stable_hash(middle))
+        self.assertEqual(receipt["root_hash"], stable_hash(TASK))
+        self.assertEqual(receipt["direct_parent_hash"], stable_hash(middle))
+        selected = build_task_report(self.data, child, home=self.root)
+        self.assertEqual(selected["scope"], "selected_subagent")
+        self.assertEqual(selected["task"]["selector"], selector)
+        self.assertEqual(selected["task"]["parent_hash"], stable_hash(middle))
+        self.assertEqual(selected["task_usage"]["total"], 120)
+        self.assertEqual(selected["turns"][0]["usage"]["total"], 120)
+        self.assertIsNone(handle(stop, self.data, home=self.root))
+        self.assertEqual(self.preview()["status"], "preview")
+        parent_card = next(self.output.glob("*.html")).read_text()
+        self.assertIn("@" + selector, parent_card)
+        self.assertNotIn(child, parent_card)
+        handle({**self.payload, "hook_event_name": "Stop"}, self.data, home=self.root)
+        parent_key = stable_hash([TASK, "turn-1"])
+        parent_receipt = json.loads((self.data / "auto-reports" /
+                                     (parent_key + ".json")).read_text())
+        self.assertEqual(parent_receipt["usage"]["total"], 500)
+        self.assertEqual(parent_receipt["subagents"]["usage"]["total"], 120)
+        self.assertEqual(parent_receipt["subagents"]["rows"][-1]["selector"], selector)
+        for extension in ("md", "html"):
+            published = (self.data / "auto-reports" / (parent_key + "." + extension)).read_text()
+            self.assertIn("@" + selector, published)
+            self.assertNotIn(child, published)
+        selected_parent = build_task_report(self.data, TASK, home=self.root)
+        for format in ("markdown", "html"):
+            self.assertIn("@" + selector, render_task_report(selected_parent, format))
+        receipt_path = self.data / "auto-reports" / (stable_hash([child, turn]) + ".json")
+        forged = {**receipt, "direct_parent_hash": "f" * 64}
+        receipt_path.write_text(json.dumps(forged))
+        self.assertEqual(build_task_report(self.data, child, home=self.root)
+                         ["turns"][0]["usage_status"], "receipt_unavailable")
 
     def test_card_preserves_paired_turn_switches_and_does_not_render_fast(self):
         contexts = [

@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .auto_report import (
+    _child_lineage,
     _connect,
     _delta,
     _directory,
@@ -79,10 +80,20 @@ def _read(path: Path) -> bytes:
 
 
 def _selectors(payload):
-    selected = {key: payload.get(key) for key in ("session_id", "turn_id", "transcript_path")}
+    selected = {key: payload.get(key) for key in ("session_id", "turn_id")}
+    selected["transcript_path"] = (
+        payload.get("agent_transcript_path")
+        if payload.get("hook_event_name") == "SubagentStop"
+        else payload.get("transcript_path")
+    )
     if any(not isinstance(value, str) or not 0 < len(value) <= 4096
            for value in selected.values()):
         raise ValueError("missing reconciliation selector")
+    if payload.get("agent_id") is not None:
+        agent = payload["agent_id"]
+        if not isinstance(agent, str) or not 0 < len(agent) <= 256:
+            raise ValueError("invalid reconciliation agent")
+        selected["agent_id"] = agent
     return selected
 
 
@@ -98,7 +109,7 @@ def _runner(root):
 
 def schedule(payload: dict, root: Path, *, home=None) -> bool:
     """Launch at most once after a reported Stop; spawn errors cannot block work."""
-    if payload.get("hook_event_name") != "Stop":
+    if payload.get("hook_event_name") not in ("Stop", "SubagentStop"):
         return False
     connection = None
     key = None
@@ -106,7 +117,12 @@ def schedule(payload: dict, root: Path, *, home=None) -> bool:
         if not settings(root)["enabled"]:
             return False
         selected = _selectors(payload)
-        key = stable_hash([selected["session_id"], selected["turn_id"]])
+        owner = selected.get("agent_id", selected["session_id"])
+        if "agent_id" in selected and _child_lineage(
+            owner, selected["session_id"], home=home,
+        ) is None:
+            return False
+        key = stable_hash([owner, selected["turn_id"]])
         connection = _store(root)
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute("SELECT * FROM turns WHERE key=?", (key,)).fetchone()
@@ -176,7 +192,12 @@ def run(payload: dict, root: Path, *, home=None, delays=DELAYS) -> dict:
     try:
         selected = _selectors(payload)
         session, turn = selected["session_id"], selected["turn_id"]
-        key = stable_hash([session, turn])
+        owner = selected.get("agent_id", session)
+        lineage = (_child_lineage(owner, session, home=home)
+                   if "agent_id" in selected else None)
+        if "agent_id" in selected and lineage is None:
+            raise ValueError("subagent lineage unavailable")
+        key = stable_hash([owner, turn])
         connection = _store(root)
         connection.execute("BEGIN IMMEDIATE")
         claimed = bool(connection.execute(
@@ -188,13 +209,18 @@ def run(payload: dict, root: Path, *, home=None, delays=DELAYS) -> dict:
             return {"status": "not_queued"}
         row = connection.execute("SELECT * FROM turns WHERE key=?", (key,)).fetchone()
         if (row is None or row["state"] != "reported"
-                or row["session_hash"] != stable_hash(session)
+                or row["session_hash"] != stable_hash(owner)
                 or row["turn_hash"] != stable_hash(turn)):
             raise ValueError("turn identity unavailable")
         original = json.loads(_read(_directory(root) / f"{key}.json"))
         if (original.get("task_hash") != row["session_hash"]
                 or original.get("turn_hash") != row["turn_hash"]
-                or not original.get("source_identity_verified")):
+                or not original.get("source_identity_verified")
+                or (lineage and (
+                    original.get("scope") != "agent_turn_stop_boundary"
+                    or original.get("root_hash") != stable_hash(session)
+                    or original.get("direct_parent_hash") !=
+                    stable_hash(lineage["parent_id"])))):
             raise ValueError("receipt identity unavailable")
         baseline = json.loads(row["baseline"])
         until = datetime.fromisoformat(original["stopped_at"]).timestamp()
@@ -208,14 +234,18 @@ def run(payload: dict, root: Path, *, home=None, delays=DELAYS) -> dict:
                 break
             time.sleep(delay)
             attempts += 1
-            current = snapshot(selected["transcript_path"], turn, completed_only=True)
+            expected = ({"expected_child": owner,
+                         "expected_parent": lineage["parent_id"],
+                         "expected_root": session} if lineage else {})
+            current = snapshot(selected["transcript_path"], turn,
+                               completed_only=True, **expected)
             if not current.get("completion_observed"):
                 continue
             if current.get("task_hash") != row["session_hash"]:
                 raise ValueError("completion identity mismatch")
             usage, status = _delta(baseline, current)
             text = ReportText(original.get("locale", "zh-Hant"))
-            children = collect(root, session, row["started"], until, home=home,
+            children = collect(root, owner, row["started"], until, home=home,
                                unnamed_label=text("unnamed"))
             _, complete = observed_total(usage, children)
             complete = (complete and not current.get("invalid_records")
@@ -223,7 +253,8 @@ def run(payload: dict, root: Path, *, home=None, delays=DELAYS) -> dict:
                         and not current.get("contexts_limited"))
             state = "complete" if complete else "partial"
             revised = {
-                **original, "scope": "user_turn_completion_boundary", "revision": 2,
+                **original, "scope": ("agent_turn_completion_boundary" if lineage
+                                       else "user_turn_completion_boundary"), "revision": 2,
                 "reconciliation_status": state,
                 "reconciled_at": datetime.now(timezone.utc).isoformat(),
                 "completion_observed": True, "completed_at": current.get("completed_at"),

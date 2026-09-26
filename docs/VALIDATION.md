@@ -6,6 +6,31 @@ declared in [pyproject.toml](../pyproject.toml) and the plugin manifest; see the
 canaries do not prove the status of a current installation. The commands near
 the end reproduce the repository checks on the current checkout.
 
+## 0.7.0 child-agent hook and isolated native canary
+
+Checked on 2026-09-26 with Codex CLI 0.157.1. Ruff, 229 tests, repository
+validation, the 25-file documentation check, staged sensitive-data scan, and
+signed-release verification passed. Runtime SHA-256:
+`05396ebd97e3e7a30d5525330f0f3ad2b13726f8d67b6b2c493c02019d0d6c14`.
+
+A fresh disposable `CODEX_HOME` installed this checkout's local marketplace and
+plugin 0.7.0, with report data in a separate disposable directory. Native
+`hooks/list` first reported nine enabled hooks needing review. Each installed
+command matched the packaged hook definition; exact current hashes were trusted
+only in this isolated fixture, after which all nine read back enabled and trusted.
+This does not grant trust to the maintainer's disabled installation. That
+installation needs its normal plugin update and `/hooks` review if selected.
+
+One real `codex exec` turn spawned one subagent and exited successfully. The
+installed hooks produced one parent and one child Stop receipt, plus completion
+revisions. The child used `agent_turn_stop_boundary`; its 12-character hashed
+selector matched the parent's child row. Its observed total was 17,329 tokens;
+the parent recorded 46,378 of its own and the same 17,329 separately as
+descendant usage. Neither receipt contained a raw Task UUID or `agent_path`.
+This CLI run did not produce an inline visualization file, so it verifies native
+hook execution and report correspondence, not Desktop card painting or the
+original screenshot's renderer failure.
+
 ## 0.6.0 documentation and installation read-back
 
 Checked on 2026-09-24 in this checkout. Ruff, all 223 unit tests, repository

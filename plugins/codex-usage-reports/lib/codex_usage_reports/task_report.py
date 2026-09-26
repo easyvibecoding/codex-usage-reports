@@ -15,7 +15,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
-from .auto_report import SCAN_BYTES, child_coverage, snapshot
+from .auto_report import SCAN_BYTES, _catalog_child_lineage, child_coverage, snapshot
 from .report_i18n import ReportText, resolve_locale
 from .task_catalog import TaskCatalog
 from .transcript import cache_read_share_percent
@@ -57,7 +57,9 @@ def _latest_turn(path_value: str) -> str | None:
     return None
 
 
-def _turns(root: Path, task_hash: str, limit: int) -> tuple[list, bool, str]:
+def _turns(root: Path, task_hash: str, limit: int, *,
+           root_hash: str | None = None,
+           direct_parent_hash: str | None = None) -> tuple[list, bool, str]:
     path = root / "auto-reports/timing.sqlite3"
     if not path.exists():
         return [], False, "not_recorded"
@@ -99,7 +101,10 @@ def _turns(root: Path, task_hash: str, limit: int) -> tuple[list, bool, str]:
                     raise ValueError("receipt too large")
                 receipt = json.loads(raw)
                 if (receipt.get("task_hash") != task_hash
-                        or receipt.get("turn_hash") != row["turn_hash"]):
+                        or receipt.get("turn_hash") != row["turn_hash"]
+                        or (root_hash is not None and (
+                            receipt.get("root_hash") != root_hash
+                            or receipt.get("direct_parent_hash") != direct_parent_hash))):
                     raise ValueError("receipt identity mismatch")
                 item.update(usage=receipt.get("usage"), task_usage=receipt.get("task_usage"),
                             parent_cache_read_share_percent=cache_read_share_percent(receipt.get("usage")),
@@ -125,9 +130,10 @@ def build_task_report(root: Path, selector: str, *, home=None, limit=50) -> dict
     text = ReportText(locale["locale"])
     with TaskCatalog(home, unnamed_label=text("unnamed")) as catalog:
         task = catalog.get(selector)
-        if task["role"] != "parent":
-            raise ValueError("select a parent Task; its turn reports include subagents")
-        description = catalog.describe(task)
+        lineage = _catalog_child_lineage(catalog, task) if task["role"] == "subagent" else None
+        if task["role"] == "subagent" and lineage is None:
+            raise ValueError("selected subagent lineage unavailable")
+        description = lineage["task"] if lineage else catalog.describe(task)
         row = catalog.connection.execute(
             "SELECT rollout_path FROM threads WHERE id=?", (task["id"],)
         ).fetchone()
@@ -137,15 +143,22 @@ def build_task_report(root: Path, selector: str, *, home=None, limit=50) -> dict
     if row and isinstance(row[0], str):
         try:
             turn = _latest_turn(row[0])
-            current = snapshot(row[0], turn or "")
+            expected = ({"expected_child": identifier,
+                         "expected_parent": lineage["parent_id"],
+                         "expected_root": lineage["root_id"]} if lineage else {})
+            current = snapshot(row[0], turn or "", **expected)
         except (OSError, ValueError):
             pass
     if current.get("task_hash") != stable_hash(identifier):
         current = {"status": "source_unavailable", "usage": None, "contexts": []}
-    turns, limited, recording = _turns(root, stable_hash(identifier), limit)
+    turns, limited, recording = _turns(
+        root, stable_hash(identifier), limit,
+        root_hash=stable_hash(lineage["root_id"]) if lineage else None,
+        direct_parent_hash=stable_hash(lineage["parent_id"]) if lineage else None,
+    )
     return {
         "schema_version": 1,
-        "scope": "selected_task",
+        "scope": "selected_subagent" if lineage else "selected_task",
         "task": description,
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "task_usage": current.get("usage"),
@@ -172,9 +185,14 @@ def render_task_report(report: dict, format: str = "markdown") -> str:
         return json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     text = ReportText(report.get("locale", "en"))
     label = report["task"]["display_name"]
+    if report.get("scope") == "selected_subagent":
+        label += " · @" + report["task"]["selector"]
+        label += " · " + text("owner", name=report["task"].get("parent_name") or
+                               text("unknown_parent"))
     usage = report.get("task_usage") or {}
     cache_share = cache_read_share_percent(usage)
-    rows = [(text("task_total"), text.number(usage.get("total"))),
+    rows = [(text("child_task_total" if report.get("scope") == "selected_subagent"
+                   else "task_total"), text.number(usage.get("total"))),
             *[(text(key), text.number(usage.get(field))) for key, field in
               (("input", "input"), ("cached", "cached_input"), ("output", "output"),
                ("reasoning", "reasoning_output"))]]
@@ -193,6 +211,7 @@ def render_task_report(report: dict, format: str = "markdown") -> str:
                  (text("context_heading"), current_context),
                  (text("turn_record_state"), report.get("turn_recording_status", "unavailable"))))
     turn_rows = []
+    child_rows = []
     for row in report.get("turns", []):
         contexts = "; ".join(text("context_pair", model=item.get("model") or text("unknown"),
                                  effort=item.get("reasoning_effort") or text("unknown"))
@@ -207,6 +226,11 @@ def render_task_report(report: dict, format: str = "markdown") -> str:
         turn_rows.append((row["started_at"], state,
                           text.number((row.get("usage") or {}).get("total")),
                           child_total, contexts))
+        for child in children.get("rows", []):
+            if isinstance(child, dict) and child.get("selector"):
+                child_rows.append((row["started_at"], "@" + child["selector"] + " · "
+                                   + str(child.get("display_name") or text("unnamed")),
+                                   text.number((child.get("usage") or {}).get("total"))))
     headers = (text("recorded_turns"), text("turn_record_state"), text("turn_delta"),
                text("child_subtotal"), text("context_heading"))
     note = text("task_report_note")
@@ -217,13 +241,19 @@ def render_task_report(report: dict, format: str = "markdown") -> str:
             for char in "[]*_`\\":
                 value = value.replace(char, f"&#{ord(char)};")
             return value.replace("\n", " ").replace("\r", " ")
+        child_section = (["## " + text("children"), "",
+                          "| " + " | ".join((text("recorded_turns"), text("children"),
+                                             text("child_subtotal"))) + " |",
+                          "| --- | --- | ---: |",
+                          *("| " + " | ".join(cell(value) for value in row) + " |"
+                            for row in child_rows), ""] if child_rows else [])
         return "\n".join([
             "# " + text("task_report_title"), "", cell(label), "",
             "| " + text("column_item") + " | " + text("column_observation") + " |",
             "| --- | ---: |", *(f"| {cell(key)} | {cell(value)} |" for key, value in rows), "",
             "| " + " | ".join(headers) + " |", "| --- | --- | ---: | --- | --- |",
             *("| " + " | ".join(cell(value) for value in row) + " |" for row in turn_rows),
-            "", note, "",
+            "", *child_section, note, "",
         ])
     if format != "html":
         raise ValueError("unsupported report format")
@@ -242,4 +272,8 @@ def render_task_report(report: dict, format: str = "markdown") -> str:
             f'<title>{escape(text("task_report_title"))}</title><main>'
             f'<h1>{escape(text("task_report_title"))}</h1><p>{escape(label)}</p>'
             + table((text("column_item"), text("column_observation")), rows)
-            + table(headers, turn_rows) + f'<p>{escape(note)}</p></main></html>')
+            + table(headers, turn_rows)
+            + (f'<h2>{escape(text("children"))}</h2>'
+               + table((text("recorded_turns"), text("children"), text("child_subtotal")),
+                       child_rows) if child_rows else "")
+            + f'<p>{escape(note)}</p></main></html>')

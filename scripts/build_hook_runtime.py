@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins/codex-usage-reports"
 EVENTS = (
-    "UserPromptSubmit", "PreToolUse", "PostToolUse", "SubagentStop",
+    "UserPromptSubmit", "PreToolUse", "PostToolUse", "SubagentStart", "SubagentStop",
     "Stop", "SessionEnd", "Interrupt",
 )
 MODULES = (

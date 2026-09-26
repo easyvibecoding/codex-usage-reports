@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "plugins/codex-usage-reports/lib"))
 from codex_usage_reports.auto_report import handle  # noqa: E402
 from codex_usage_reports.cli import main  # noqa: E402
 from codex_usage_reports.task_report import build_task_report, render_task_report  # noqa: E402
-from codex_usage_reports.util import data_path  # noqa: E402
+from codex_usage_reports.util import data_path, stable_hash  # noqa: E402
 from test_auto_report import counter, native_counter  # noqa: E402
 
 TASK = "11111111-2222-4333-8444-555555555555"
@@ -111,6 +111,33 @@ class CliTest(unittest.TestCase):
         report = build_task_report(self.data, TASK, home=self.native)
         self.assertIsNone(report["task_usage"])
         self.assertEqual(report["usage_status"], "source_unavailable")
+
+    def test_cli_can_select_subagent_without_adding_its_tokens_to_parent(self):
+        child = "aaaaaaaa-1234-4234-8234-123456789abc"
+        child_path = self.native / "synthetic-child.jsonl"
+        source = {"subagent": {"thread_spawn": {"parent_thread_id": TASK}}}
+        child_path.write_text("".join(json.dumps(record) + "\n" for record in (
+            {"type": "session_meta", "payload": {"id": child, "source": source}},
+            {"type": "event_msg", "payload": {"type": "task_started",
+                                               "turn_id": "synthetic-child-turn"}},
+            counter(300),
+        )))
+        with sqlite3.connect(self.native / "state_5.sqlite") as db:
+            db.execute("INSERT INTO threads VALUES (?,?,?,NULL,NULL,NULL,?,?)",
+                       (child, "Synthetic <child>", "PRIVATE CHILD TITLE",
+                        json.dumps(source), str(child_path)))
+        code, output, err = self.invoke("task", child, "--format", "json")
+        self.assertEqual((code, err), (0, ""))
+        report = json.loads(output)
+        self.assertEqual(report["scope"], "selected_subagent")
+        self.assertEqual(report["task"]["selector"], stable_hash(child)[:12])
+        self.assertEqual(report["task"]["parent_hash"], stable_hash(TASK))
+        self.assertEqual(report["task_usage"]["total"], 300)
+        self.assertEqual(report["turns"], [])
+        self.assertNotIn(child, output)
+        self.assertNotIn(TASK, output)
+        parent = build_task_report(self.data, TASK, home=self.native)
+        self.assertEqual(parent["task_usage"]["total"], 1000)
 
     def test_formats_locale_safe_names_and_no_clobber(self):
         self.record()

@@ -19,6 +19,7 @@ from codex_usage_reports.child_usage import (  # noqa: E402
     capture,
     collect,
 )
+from codex_usage_reports.util import stable_hash  # noqa: E402
 
 PARENT = "12345678-1234-1234-1234-123456789abc"
 CHILD_A = "aaaaaaaa-1234-1234-1234-123456789abc"
@@ -195,6 +196,58 @@ class ChildUsageTest(unittest.TestCase):
         self.assertEqual(result["usage"]["total"], 36)
         self.assertNotIn("U", {row["display_name"] for row in result["rows"]})
         self.assertEqual({row["parent_name"] for row in result["rows"]}, {"主代理", "A"})
+
+    def test_nested_stop_uses_catalog_parent_for_hook_receipt_and_both_reports(self) -> None:
+        self._page(CHILD_A, PARENT, [metadata(CHILD_A, PARENT)], name="A")
+        self._page(
+            GRANDCHILD,
+            CHILD_A,
+            [metadata(GRANDCHILD, CHILD_A), request(GRANDCHILD, "nested", 10, 23),
+             complete(11)],
+            name="G",
+        )
+        # The hook repeats the root session id for a nested agent. An absent
+        # transcript path must resolve through the verified catalog row.
+        self._stop(GRANDCHILD, None)
+        with sqlite3.connect(self.root / DB_NAME) as stored:
+            parent_hash, source = stored.execute(
+                "SELECT parent_hash,source FROM requests"
+            ).fetchone()
+        self.assertEqual(parent_hash, stable_hash(CHILD_A))
+        self.assertEqual(source, "hook")
+
+        root_report = collect(self.root, PARENT, WINDOW_START, WINDOW_START + 20,
+                              home=self.home)
+        child_report = collect(self.root, CHILD_A, WINDOW_START, WINDOW_START + 20,
+                               home=self.home)
+        self.assertEqual(root_report["usage"]["total"], 23)
+        self.assertEqual(child_report["usage"]["total"], 23)
+        self.assertEqual(root_report["status"], "partial")
+        self.assertEqual(child_report["status"], "observed")
+        nested_row = next(row for row in root_report["rows"] if row["display_name"] == "G")
+        self.assertEqual(nested_row["selector"], stable_hash(GRANDCHILD)[:12])
+        self.assertEqual(child_report["rows"][0]["selector"], nested_row["selector"])
+        self.assertNotIn(GRANDCHILD, json.dumps(root_report))
+        self.assertEqual(nested_row["parent_name"], "A")
+        self.assertEqual(child_report["rows"][0]["parent_name"], "A")
+
+    def test_nested_stop_rejects_wrong_root_or_transcript_parent(self) -> None:
+        self._page(CHILD_A, PARENT, [metadata(CHILD_A, PARENT)], name="A")
+        path = self._page(
+            GRANDCHILD,
+            CHILD_A,
+            [metadata(GRANDCHILD, CHILD_A), metadata(GRANDCHILD, PARENT),
+             request(GRANDCHILD, "wrong-parent", 10, 23)],
+            name="G",
+        )
+        self._stop(GRANDCHILD, path, parent=UNRELATED)
+        self.assertFalse((self.root / DB_NAME).exists())
+        self._stop(GRANDCHILD, path)
+        with sqlite3.connect(self.root / DB_NAME) as stored:
+            self.assertEqual(stored.execute("SELECT count(*) FROM requests").fetchone()[0], 0)
+        result = collect(self.root, CHILD_A, WINDOW_START, WINDOW_START + 20,
+                         home=self.home)
+        self.assertIsNone(result["usage"])
 
     def test_duplicate_stop_and_cache_live_request_are_deduplicated(self) -> None:
         path = self._page(

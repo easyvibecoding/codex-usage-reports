@@ -1,3 +1,3 @@
 """Local Task and turn usage reports for Codex. No model calls or enforcement."""
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"

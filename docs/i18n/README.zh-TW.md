@@ -27,15 +27,15 @@ codex plugin add codex-usage-reports@codex-usage-reports
 
 在 Codex 中檢視並信任外掛 hooks，然後**開啟新的 Task**。已安裝的 hooks 會依執行環境的信任與生命週期規則載入。請參閱官方[外掛指南](https://learn.chatgpt.com/docs/plugins)與 [hooks 指南](https://learn.chatgpt.com/docs/hooks)。
 
-若更新變更了 hook 定義，請在 Codex CLI 輸入 `/hooks`，重新檢視並信任外掛已變更的 hooks。信任綁定的是確切的 hook 定義：外掛即使已安裝並啟用，狀態為 `modified` 的 hooks 仍會被略過。重開 App 或從手機開啟 Task 都不會自動取得信任。完成檢視後，再開啟新的 Task。
+若更新變更了 hook 定義，請在 Codex CLI 輸入 `/hooks`，重新檢視並信任所有標示為已變更或未信任的定義，包含新增的 `SubagentStart`。信任綁定的是確切的 hook 定義：外掛即使已安裝並啟用，狀態為 `modified` 的 hooks 仍會被略過。重開 App 或從手機開啟 Task 都不會自動取得信任。完成檢視後，再開啟新的 Task。
 
 ### 2. 照常工作
 
-像平常一樣請 Codex 處理工作。Hook 會記錄該輪的基準值，要求在最終回答前產生一次卡片，並在收到支援的結束事件時儲存報告紀錄。自動報告預設啟用。
+像平常一樣請 Codex 處理工作。支援的生命週期事件會讓主 Task 與各子智能體以自己的 Task／turn 身分記錄基準值、在最終回答前產生卡片，並儲存各自的報告紀錄。自動報告預設啟用；實際涵蓋仍取決於 hook 傳遞與原生紀錄。
 
-`Stop` 之後，一個本機 Python 背景程序會檢查該輪的原生 `task_complete` 紀錄，最多進行八次有範圍限制的掃描，重試期限為 25 秒。它不會呼叫模型，也不會延續 Task。確認該輪的完成邊界後，會另存修訂報告，納入已寫入的最終回答用量，避免算入下一輪。證據缺漏或不完整時，仍保留待更新或部分可用狀態；停用自動報告也會停止後續核對。
+`Stop` 或 `SubagentStop` 之後，一個本機 Python 背景程序會檢查該 Task、該輪的原生 `task_complete` 紀錄，最多進行八次有範圍限制的掃描，重試期限為 25 秒。它不會呼叫模型，也不會延續 Task。確認該輪的完成邊界後，會另存修訂報告，納入已寫入的最終回答用量，避免算入下一輪。證據缺漏或不完整時，仍保留待更新或部分可用狀態；停用自動報告也會停止後續核對。
 
-行內卡片仍是最終回答**之前**擷取的快照。原始 Stop JSON、HTML 與 Markdown 報告都會保留；重新查詢 Task 報告時，會選用最新發布的修訂版。覆寫卡片的 HTML 檔案無法可靠地更新原卡片：手機遠端 A/B 實驗中，重進 Task 後，原卡片仍顯示 A，新引用才顯示 B。因此，本外掛不啟用原行內卡片的自動替換。請參閱[結束後核對與預覽行為](../../docs/ARCHITECTURE.md#completion-reconciliation)。
+行內卡片仍是最終回答**之前**擷取的快照。原始終止事件 JSON、HTML 與 Markdown 報告都會保留；重新查詢 Task 報告時，會選用最新發布的修訂版。覆寫卡片的 HTML 檔案無法可靠地更新原卡片：手機遠端 A/B 實驗中，重進 Task 後，原卡片仍顯示 A，新引用才顯示 B。因此，本外掛不啟用原行內卡片的自動替換。請參閱[結束後核對與預覽行為](../../docs/ARCHITECTURE.md#completion-reconciliation)。
 
 ### 3. 查看 Task
 
@@ -52,7 +52,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py auto-report status
 python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --format markdown
 ```
 
-將 `TASK_ID` 設為要查看的 Task 原生 ID。報告範圍僅限於該 Task。HTML 匯出、設定與解除安裝方式，請參閱[完整使用教學](../../docs/USAGE.md)。
+將 `TASK_ID` 設為要查看的主 Task 或子智能體的原生 ID。所選 Task 的原生計數與報告紀錄屬於它自己；已驗證的後代用量另列小計。HTML 匯出、設定與解除安裝方式，請參閱[完整使用教學](../../docs/USAGE.md)。
 
 ## 看清楚每一輪用了多少
 
@@ -60,12 +60,14 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 | 想知道什麼？ | 報告會顯示什麼？ |
 | --- | --- |
-| 這個 Task 累計用了多少？ | 所選父 Task 實際觀測到的累計 Token 用量。 |
+| 這個 Task 累計用了多少？ | 所選主 Task 或子智能體自身實際觀測到的累計 Token 用量。 |
 | 這一輪增加了多少？ | 原生本輪計數，或相同來源的有效累計計數差額。 |
 | 用了哪個模型與推理強度？ | 該輪觀測到的設定，包含可見的設定變更。 |
-| 子代理用了多少？ | 獨立的子代理用量小計，以及資料涵蓋狀態。 |
+| 後代智能體用了多少？ | 依原生親子關係核實的獨立小計，以及資料涵蓋狀態；不併入所選 Task 的原生計數。 |
 | 帳號還剩多少配額？ | 若有可用資料，顯示原生配額觀測值，並與 Task Token 用量分開呈現。 |
 | 之後還能查閱嗎？ | 留存於本機的 HTML、Markdown 與 JSON 報告紀錄。 |
+
+子智能體的卡片與報告紀錄描述它自己的用量；主 Task 另依可核實的原生譜系彙總後代。主 Task 的後代列與子智能體自己的卡片、報告使用相同的雜湊 `@` 識別碼，同名智能體也能對應。兩邊的觀測時間與涵蓋範圍可能不同，缺少 hook、計數或親子證據時會顯示部分可用或未知，不會把子用量塞進主 Task 的原生計數。
 
 執行階段僅使用 Python 標準函式庫，不需呼叫 LLM 計算用量、不需 API 金鑰，也不會將報告傳送至託管的分析服務。本專案從 [Codex Run Budget](https://github.com/easyvibecoding/codex-run-budget) 抽出報告功能，獨立運作。
 
@@ -88,7 +90,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 - **如實呈現缺漏資料。** 計數器重設、截斷紀錄與設定衝突，都會保留為部分可用或未知。
 - **保留歷史設定。** 目前的全域模型偏好不會覆蓋過去某輪的觀測結果。
-- **核對完成紀錄。** 本機背景程序會在有限次數內核對稍後寫入的原生紀錄，並保留原始 Stop JSON／HTML／Markdown 報告與行內快照。
+- **核對完成紀錄。** 本機背景程序會在有限次數內核對稍後寫入的原生紀錄，並保留原始終止事件 JSON／HTML／Markdown 報告與行內快照。
 - **區分統計範圍。** 快取輸入屬於輸入用量的一部分；推理輸出屬於輸出用量的一部分。子代理用量與帳號配額各自呈現。
 - **快取讀取占比。** 卡片與儲存的報告會顯示快取輸入占已觀測輸入的比例。缺漏或零輸入維持未提供；這不是官方的快取未命中診斷。
 - **資料留在本機。** 報告狀態中的原生識別碼會經過雜湊處理；私人顯示名稱可能出現在你的本機報告中。

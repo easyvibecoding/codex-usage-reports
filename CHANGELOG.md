@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 — 2026-09-26
+
+- Add `SubagentStart` support so a subagent can use its own Task and turn IDs for a pre-final card and `agent_turn_stop_boundary` receipt; explicit completion can publish a separate `agent_turn_completion_boundary` revision.
+- Allow selected-Task reports for subagents while keeping the parent's native counter, verified descendant subtotal, and account quota in separate scopes. Incomplete lineage or usage remains partial or unavailable.
+- Show the same hashed `@` selector in a verified parent descendant row and that subagent's own card, receipt, and selected-Task report.
+- Require native review and trust for every changed or untrusted hook definition after installation, including `SubagentStart`; signed runtime updates do not silently authorize them.
+
 ## 0.6.0
 
 - Show observed cached-input share in automatic receipts, preview cards, and selected Task reports.
