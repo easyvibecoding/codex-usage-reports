@@ -9,7 +9,6 @@ from pathlib import Path
 from .auto_report import handle
 from .util import data_path
 
-MAX_INPUT_BYTES = 2 * 1024 * 1024
 EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "SubagentStart", "SubagentStop",
           "Stop", "SessionEnd", "Interrupt")
 
@@ -32,9 +31,7 @@ def main() -> int:
                 raise ValueError("preview requires an output directory")
             result = preview(root, *args.preview, output_dir=Path(args.output_dir), home=home)
         else:
-            raw = sys.stdin.buffer.read(MAX_INPUT_BYTES + 1)
-            if len(raw) > MAX_INPUT_BYTES:
-                raise ValueError("input exceeds limit")
+            raw = sys.stdin.buffer.read()
             payload = json.loads(raw.decode("utf-8"))
             if not isinstance(payload, dict) or not payload.get("session_id"):
                 raise ValueError("missing identity")

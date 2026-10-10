@@ -109,7 +109,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 初回インストール後、CLI の `codex` → `/hooks` で固定エントリーを確認して信頼してください。通常のランタイムと CLI の更新ではフック定義が変わらず、再承認は不要です。これは同じ発行者が今後署名するプログラムの実行を許可するものです。既定ではプロンプト送信時に最大6時間に1回、バックグラウンドで確認し、署名とファイルのハッシュが一致した更新だけを有効にします。新しいタスクには検証済みバージョンを表示し、進行中のタスクは元のバージョンを保持します。
 
-新しいフック、エントリーや鍵の変更、プラグイン／skill 構造の変更には、通常の更新と変更フックの確認が必要です。Codex の信頼記録は書き換えません。インストール済みプラグイン内で `python3 scripts/publisher_updates.py status` を実行すると実際のバージョンを確認できます。`off`、`on`、`update`、`rollback` で無効化、有効化、手動更新、ロールバックができます。Plugins 画面は元のパッケージバージョンを表示する場合があります。[更新の仕組みと操作](../SIGNED_UPDATES.md) · [信頼の通知](../UPDATE_NOTICES.md)。
+新しいフック、エントリー、鍵や hook timeout の変更、プラグイン／skill 構造の変更には、通常の更新と変更フックの確認が必要です。Hooks は完全な JSON を読み取り、`Stop` と `SubagentStop` は10秒、その他は3秒です。Codex の信頼記録は書き換えません。インストール済みプラグイン内で `python3 scripts/publisher_updates.py status` を実行すると実際のバージョンを確認できます。`off`、`on`、`update`、`rollback` で無効化、有効化、手動更新、ロールバックができます。Plugins 画面は元のパッケージバージョンを表示する場合があります。[更新の仕組みと操作](../SIGNED_UPDATES.md) · [信頼の通知](../UPDATE_NOTICES.md)。
 
 インストール済みプラグインのバージョンとネイティブ hook の信頼状態を手動で確認するには、`python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"` を実行します。この結果は現在有効な署名付きランタイムのバージョンとは別の範囲です。
 

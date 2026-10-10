@@ -109,7 +109,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 首次安装此版本后，在 CLI 输入 `codex` → `/hooks`，检查并信任固定入口。此后常规运行程序与 CLI 更新沿用相同的 hook 定义，无需重新授权；这表示同意执行同一发布者未来签署的程序。默认在提交提示时启动后台检查，每六小时最多一次，只有签名和文件哈希都通过的版本才会启用。新任务使用新版并显示已验证版本，进行中的任务保留原版。
 
-新增 hook、更改入口或密钥，以及插件／skill 结构更新，仍须更新插件并检查变更的 hooks。工具不会修改 Codex 的信任记录。在已安装插件目录执行 `python3 scripts/publisher_updates.py status` 可读取实际版本；将 `status` 换成 `off`、`on`、`update` 或 `rollback` 可禁用、启用、手动更新或回退。Plugins 页面可能仍显示原安装版本。[更新机制与操作](../SIGNED_UPDATES.md) · [授权提醒](../UPDATE_NOTICES.md)。
+新增 hook、更改入口、密钥或 hook timeout，以及插件／skill 结构更新，仍须更新插件并检查变更的 hooks。Hooks 读取完整 JSON；`Stop` 和 `SubagentStop` 有 10 秒，其余保持 3 秒。工具不会修改 Codex 的信任记录。在已安装插件目录执行 `python3 scripts/publisher_updates.py status` 可读取实际版本；将 `status` 换成 `off`、`on`、`update` 或 `rollback` 可禁用、启用、手动更新或回退。Plugins 页面可能仍显示原安装版本。[更新机制与操作](../SIGNED_UPDATES.md) · [授权提醒](../UPDATE_NOTICES.md)。
 
 手动检查已安装插件版本和原生 hook 信任状态时，使用 `python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"`。其结果与当前启用的签名运行程序版本属于不同范围。
 

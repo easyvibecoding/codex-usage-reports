@@ -109,7 +109,7 @@ python3 plugins/codex-usage-reports/scripts/usage_reports.py task "$TASK_ID" --f
 
 首次安裝這版後，在 CLI 輸入 `codex` → `/hooks`，檢視並信任固定入口。之後一般執行程式與 CLI 更新沿用相同的 hook 定義，不必再授權；這表示同意執行同一發布者未來簽署的程式。預設在送出提示時啟動背景檢查，每六小時最多一次，只有簽章與檔案雜湊都通過的版本才會套用。新任務使用新版並顯示已驗證版本，進行中的任務保留原版。
 
-新增 hook、變更入口或金鑰，以及外掛／skill 結構更新，仍須更新外掛並檢視已變更的 hooks。工具不會修改 Codex 的信任紀錄。在已安裝外掛目錄執行 `python3 scripts/publisher_updates.py status` 可讀取實際版本；將 `status` 換成 `off`、`on`、`update` 或 `rollback` 可停用、啟用、手動更新或回退。Plugins 頁面可能仍顯示原安裝版本。[更新機制與操作](../SIGNED_UPDATES.md) · [授權提醒](../UPDATE_NOTICES.md)。
+新增 hook、變更入口、金鑰或 hook timeout，以及外掛／skill 結構更新，仍須更新外掛並檢視已變更的 hooks。Hooks 讀取完整 JSON；`Stop` 與 `SubagentStop` 有 10 秒，其餘維持 3 秒。工具不會修改 Codex 的信任紀錄。在已安裝外掛目錄執行 `python3 scripts/publisher_updates.py status` 可讀取實際版本；將 `status` 換成 `off`、`on`、`update` 或 `rollback` 可停用、啟用、手動更新或回退。Plugins 頁面可能仍顯示原安裝版本。[更新機制與操作](../SIGNED_UPDATES.md) · [授權提醒](../UPDATE_NOTICES.md)。
 
 手動檢查已安裝外掛版本與原生 hook 信任狀態時，使用 `python3 scripts/usage_reports.py updates check --refresh --cwd "$PROJECT_DIR"`。此結果與目前啟用的簽署執行程式版本是不同範圍。
 

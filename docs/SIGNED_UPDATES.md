@@ -11,6 +11,8 @@ New events, changes to the verifier/key, or plugin and skill metadata still need
 normal plugin installation and any changed-hook review. Disabling the plugin or
 all applicable hooks prevents automatic checking. No native trust is granted by
 this code and no model request or scheduled Task is created.
+Changing a hook's native timeout also changes its trust hash even when the
+launcher command stays identical; review that updated hook in `/hooks`.
 
 ## Update lifecycle and controls
 
@@ -49,6 +51,26 @@ The Plugins interface reports the installed package version, which can be older
 than the active runtime. The normal CLI uses the signed active runtime after the
 store has been initialized. `updates check` compares package versions and native
 trust; `publisher_updates.py status` is authoritative for the runtime.
+
+## Complete hook input and terminal timeouts
+
+The bootstrap and runtime adapter read complete UTF-8 JSON from stdin without a
+fixed byte limit. Valid input larger than 2 MiB reaches reporting unchanged.
+Malformed JSON or UTF-8, duplicate bootstrap keys, mismatched events, missing
+Task identity and parser recursion failures still skip reporting without
+blocking work. Raw input and parser/exception text are not persisted or emitted.
+The signed manifest and runtime download limits remain separate and unchanged.
+
+`Stop` and `SubagentStop` have a ten-second native hook timeout because the
+original receipt is generated synchronously from bounded Task and descendant
+snapshots. Other hooks retain three seconds. The completion worker starts only
+after an original receipt is reported; its separate bounded checks and revision
+do not replace the original Stop boundary. An overloaded host can still time out.
+
+This bootstrap change requires a reviewed package update, publisher-signed
+release and normal changed-hook review. A runtime-only patch cannot update the
+installed entry. Existing Task pins and retained archives stay unchanged; the
+new entry and signed runtime apply to new Tasks after installation and review.
 
 ## Verification and failure behavior
 

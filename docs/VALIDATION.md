@@ -7,6 +7,48 @@ canaries do not prove the status of a current installation. The commands near
 the end reproduce the repository checks on the current checkout.
 
 
+## 0.7.4 complete hook input and terminal timeouts — 2026-10-10
+
+Aligned the report-only interfaces reviewed from Run Budget source range
+`bf1c9fbfb2f2c76e9aeb6290089aed6dec7adf45..6a2ce5815d195d68ac7d82980a936a9d63994ecc`.
+The `alignment-needed` decision covered complete lifecycle/reconciliation JSON,
+synchronous terminal timeouts and the package/native trust boundary. Run
+Budget's enforcing bootstrap diagnostics were not imported; Usage Reports
+retains nonblocking empty output on bootstrap input or runtime failures.
+
+The signed runtime has sequence `1791616103` and SHA-256
+`37ec8e340b15a3851e18c5d998050e2f8017168c128560386db2b9ffd358abed`.
+Ruff, all 267 unit/integration tests, repository validation, the 25-file
+documentation check, reproducible runtime checks and signature verification
+passed. Seven new tests cover the old 2 MiB boundary, larger valid input,
+multibyte UTF-8, malformed large input, duplicate keys, event/identity validation,
+parser recursion and private runtime errors, full reconciliation dispatch and
+the exact packaged timeouts. Existing pin, Stop boundary and completion revision
+tests remain passing.
+
+Codex CLI 0.160.1 installed this checkout as 0.7.4 in a disposable Codex home.
+The installed manifest, hooks, bootstrap, two archives, release manifest and
+publisher policy matched source byte-for-byte. Native `hooks/list` reported nine
+enabled, untrusted hooks with no warnings or errors: `stop` and `subagentStop`
+had `timeoutSec: 10`, and the other seven definitions had `timeoutSec: 3`.
+This check did not grant native trust or change the maintainer's setup.
+
+Direct execution of the installed publisher commands used synthetic native
+records and a separate private reporting store. Invalid 6,000,264-byte JSON
+returned an empty object in 0.124 seconds. A valid 6,000,270-byte prompt reached
+the signed runtime and generated its normal footer in 0.155 seconds. The
+6,000,258-byte synchronous Stop completed in 0.166 seconds and produced a
+`user_turn_stop_boundary` receipt with an observed 200-token delta. All commands
+returned exit 0 with empty stderr and no governance decisions. Private test
+padding was absent from the reporting store; its publisher status selected
+signed runtime 0.7.4.
+
+These are installed-command and native manifest checks, not a model-driven
+lifecycle or Desktop rendering canary, nor a guarantee against host overload.
+The changed bootstrap and terminal timeouts require normal package installation
+and `/hooks` review; retained entries, Task pins and existing receipts are not
+rewritten by this release.
+
 ## 0.7.3 subagent visualization output — 2026-09-26
 
 The compatible signed runtime has sequence `1790433141` and SHA-256

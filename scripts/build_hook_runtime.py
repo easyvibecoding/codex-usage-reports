@@ -66,7 +66,8 @@ def artifacts(plugin: Path = PLUGIN) -> dict[Path, bytes]:
                 {
                     "type": "command",
                     "command": command,
-                    "timeout": 3,
+                    # Terminal hooks synchronously snapshot and publish receipts.
+                    "timeout": 10 if event in {"Stop", "SubagentStop"} else 3,
                     "statusMessage": "Recording usage report",
                 }
             ]

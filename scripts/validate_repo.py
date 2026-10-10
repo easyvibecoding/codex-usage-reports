@@ -60,7 +60,8 @@ def main() -> int:
         for group in groups:
             for hook in group["hooks"]:
                 assert hook["command"].startswith("python3 -I -c "), event
-                assert hook["timeout"] <= 3, "report hooks must be bounded"
+                expected_timeout = 10 if event in {"Stop", "SubagentStop"} else 3
+                assert hook["timeout"] == expected_timeout, "report hook timeout differs"
     for path, expected in artifacts().items():
         assert path.is_file() and path.read_bytes() == expected, "runtime artifacts are stale"
     assert not FORBIDDEN_MODULES.intersection(p.stem for p in PACKAGE.glob("*.py")), (

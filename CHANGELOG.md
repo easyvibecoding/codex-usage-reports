@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.4 — 2026-10-10
+
+- Read complete hook and reconciliation JSON without the fixed 2 MiB input limit; malformed input and reporting failures remain nonblocking.
+- Give synchronous `Stop` and `SubagentStop` reports 10 seconds to finish their bounded snapshots and receipt publication; other hooks retain 3 seconds.
+- Document the package and native hook review required by bootstrap or timeout changes. Existing Task pins and original Stop receipts remain unchanged.
+
 ## 0.7.3 — 2026-09-26
 
 - Relocate a verified subagent's inherited root-Task visualization directory into the subagent's own native visualization root, using the child's UUIDv7 UTC date and preserving safe subdirectories.

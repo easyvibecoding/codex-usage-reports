@@ -450,10 +450,9 @@ def main(source, policy, argv=None):
             return 0
         if event not in policy["events"]:
             raise ValueError("unknown hook event")
-        raw = sys.stdin.buffer.read(2 * 1024 * 1024 + 1)
+        raw = sys.stdin.buffer.read()
         payload = parse(raw)
-        if (len(raw) > 2 * 1024 * 1024 or not isinstance(payload, dict)
-                or payload.get("hook_event_name") != event):
+        if not isinstance(payload, dict) or payload.get("hook_event_name") != event:
             raise ValueError("invalid hook input")
         task = payload.get("session_id")
         if not isinstance(task, str) or not 0 < len(task) <= 256:
